@@ -11,7 +11,7 @@
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "coverage": "c8 --reporter=text-lcov > coverage.lcov",
     "type-check": "tsc --noEmit",
-    "test": "c8 tsx --test tests/*.test.ts",
+    "test": "c8 --reporter=lcov --reporter=text tsx --test tests/*.test.ts",
     "prepack": "npm run build && npm test",
     "release": "standard-version",
     "release:alpha": "standard-version --prerelease alpha",
