@@ -1,0 +1,43 @@
+{
+  "name": "react-native-ble-plx-mock",
+  "version": "0.1.0-alpha.1",
+  "description": "🔌 Mock implementation of react-native-ble-plx for testing. Simulate BLE devices, control responses, and accelerate development without physical hardware.",
+  "type": "module",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "type-check": "tsc --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
+    "prepack": "npm run build && npm test"
+  },
+  "peerDependencies": {
+    "react-native-ble-plx": "^2.x"
+  },
+  "keywords": [
+    "react-native",
+    "ble",
+    "bluetooth",
+    "mock",
+    "testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmanto/react-native-ble-plx-mock.git"
+  },
+  "author": "Daniel Mantovani",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dmanto/react-native-ble-plx-mock/issues"
+  },
+  "homepage": "https://github.com/dmanto/react-native-ble-plx-mock#readme",
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "@types/react-native": "^0.72.8",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
