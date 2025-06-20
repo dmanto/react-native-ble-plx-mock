@@ -10,11 +10,10 @@ describe('MockBleManager', () => {
     let serviceUUID = '180D';
     let charUUID = '2A37';
 
-    before(() => {
-        bleManager = new MockBleManager();
-    });
-
     beforeEach(() => {
+        bleManager = new MockBleManager();
+        // Set faster discovery interval for tests
+        bleManager.setDiscoveryInterval(100); // 100ms for faster tests
         // Reset state before each test
         bleManager.setState('PoweredOn');
         bleManager.clearMockDevices();
@@ -43,6 +42,19 @@ describe('MockBleManager', () => {
         });
     });
 
+    afterEach(() => {
+        bleManager.stopDeviceScan();
+        // Clean up any connected devices
+        [heartMonitorId, thermoId, 'test-device'].forEach(async (id) => {
+            try {
+                if (bleManager.isDeviceConnected(id)) {
+                    await bleManager.cancelDeviceConnection(id);
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+        });
+    });
     it('should manage Bluetooth state', async () => {
         assert.equal(await bleManager.state(), 'PoweredOn');
 
@@ -276,8 +288,8 @@ describe('MockBleManager', () => {
             restoreStateFunction: (state) => {
                 if (state) {
                     restoredDevices = state.connectedPeripherals
-                    .map(d => d.name)
-                    .filter((name): name is string => typeof name === 'string');
+                        .map(d => d.name)
+                        .filter((name): name is string => typeof name === 'string');
                 }
             }
         });
@@ -285,5 +297,217 @@ describe('MockBleManager', () => {
         // Allow restoration to happen
         await new Promise(resolve => setTimeout(resolve, 1));
         assert.deepEqual(restoredDevices, ['Heart Monitor']);
+    });
+
+    it('should handle explicit scan errors', async () => {
+        const errors: Error[] = [];
+        const devices: MockDevice[] = [];
+
+        // Start scanning
+        bleManager.startDeviceScan(
+            null,
+            null,
+            (error, device) => {
+                if (error) errors.push(error);
+                if (device) devices.push(device);
+            }
+        );
+
+        // Simulate a scan error
+        const testError = new Error('Simulated scan error');
+        bleManager.simulateScanError(testError);
+
+        // Allow time for the error to propagate
+        await new Promise(resolve => setTimeout(resolve, 850));
+
+        // Add a device to ensure normal operation continues after error
+        bleManager.addMockDevice({
+            id: 'test-device',
+            name: 'Test Device',
+            isConnectable: true
+        });
+
+        // Allow time for device discovery
+        await new Promise(resolve => setTimeout(resolve, 20));
+        bleManager.stopDeviceScan();
+
+        // Verify error was received
+        assert.strictEqual(errors.length, 1, 'Should receive one error');
+        assert.strictEqual(errors[0].message, 'Simulated scan error', 'Should receive correct error message');
+        assert.ok(devices.length > 0, 'Should still receive normal devices');
+    });
+
+    it('should handle connection errors', async () => {
+        // Simulate a connection error
+        const testError = new Error('Connection failed');
+        bleManager.simulateConnectionError(heartMonitorId, testError);
+
+        // Attempt to connect
+        try {
+            await bleManager.connectToDevice(heartMonitorId);
+            assert.fail('Should have thrown an error');
+        } catch (error) {
+            assert.strictEqual((error as Error).message, 'Connection failed');
+        }
+
+        // Clear error and verify normal connection works
+        bleManager.clearConnectionError(heartMonitorId);
+        const device = await bleManager.connectToDevice(heartMonitorId);
+        assert.strictEqual(device.name, 'Heart Monitor');
+    });
+
+    it('should handle disconnection errors', async () => {
+        // First connect normally
+        await bleManager.connectToDevice(heartMonitorId);
+
+        // Simulate disconnection error
+        const testError = new Error('Disconnection failed');
+        bleManager.simulateDisconnectionError(heartMonitorId, testError);
+
+        // Listen for disconnection
+        const disconnectEvents: Error[] = [];
+        const sub = bleManager.onDeviceDisconnected(
+            heartMonitorId,
+            (error) => {
+                if (error) disconnectEvents.push(error);
+            }
+        );
+
+        // Attempt to disconnect (should trigger error)
+        try {
+            await bleManager.cancelDeviceConnection(heartMonitorId);
+            assert.fail('Disconnection should have failed');
+        } catch (error) {
+            assert.strictEqual((error as Error).message, 'Disconnection failed');
+        }
+        sub.remove();
+
+        // Verify error was received
+        assert.strictEqual(disconnectEvents.length, 1);
+        assert.strictEqual(disconnectEvents[0].message, 'Disconnection failed');
+
+    });
+
+    it('should handle characteristic read errors', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Simulate read error
+        const testError = new Error('Read failed');
+        bleManager.simulateCharacteristicReadError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testError
+        );
+
+        // Attempt to read
+        try {
+            await bleManager.readCharacteristicForDevice(
+                heartMonitorId,
+                serviceUUID,
+                charUUID
+            );
+            assert.fail('Should have thrown an error');
+        } catch (error) {
+            assert.strictEqual((error as Error).message, 'Read failed');
+        }
+
+        // Clear error and verify normal read works
+        bleManager.clearCharacteristicReadError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+        bleManager.setCharacteristicValueForReading(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            'test-value'
+        );
+        const char = await bleManager.readCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+        assert.strictEqual(char.value, 'test-value');
+    });
+
+    it('should handle characteristic write errors', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Simulate write error
+        const testError = new Error('Write failed');
+        bleManager.simulateWriteWithResponseError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testError
+        );
+
+        // Attempt to write
+        try {
+            await bleManager.writeCharacteristicWithResponseForDevice(
+                heartMonitorId,
+                serviceUUID,
+                charUUID,
+                'test-value'
+            );
+            assert.fail('Should have thrown an error');
+        } catch (error) {
+            assert.strictEqual((error as Error).message, 'Write failed');
+        }
+
+        // Clear error and verify normal write works
+        bleManager.clearWriteWithResponseError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+        await bleManager.writeCharacteristicWithResponseForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            'test-value'
+        );
+    });
+
+    it('should clear all simulated errors', async () => {
+        // Set various errors
+        bleManager.simulateScanError(new Error('Scan error'));
+        bleManager.simulateConnectionError(heartMonitorId, new Error('Connection error'));
+        bleManager.simulateCharacteristicReadError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            new Error('Read error')
+        );
+
+        // Clear all
+        bleManager.clearAllSimulatedErrors();
+
+        // Verify all cleared
+        bleManager.startDeviceScan(null, null, (error) => {
+            assert.strictEqual(error, null, 'Scan error should be cleared');
+        });
+
+        try {
+            await bleManager.connectToDevice(heartMonitorId);
+        } catch (error) {
+            assert.fail('Connection error should be cleared');
+        }
+
+        try {
+            await bleManager.readCharacteristicForDevice(
+                heartMonitorId,
+                serviceUUID,
+                charUUID
+            );
+        } catch (error) {
+            assert.fail('Read error should be cleared');
+        }
     });
 });

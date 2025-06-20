@@ -2,9 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## 0.2.0-alpha.0 (2025-06-20)
-
 ## [0.2.0-alpha.1] - YYYY-MM-DD
+
+### Added
+- `setDiscoveryInterval()` method for faster tests
+- Enhanced error simulation capabilities
+- Improved state restoration support
+
+### Fixed
+- Timing issues in scan tests
+- Disconnection error handling
+- Test cleanup reliability
+
+## 0.2.0-alpha.0 (2025-06-20)
 
 ### Added
 - Complete BLE manager mock interface

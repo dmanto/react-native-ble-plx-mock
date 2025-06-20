@@ -1,6 +1,6 @@
 {
   "name": "react-native-ble-plx-mock",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.0-alpha.1",
   "description": "🔌 Mock implementation of react-native-ble-plx for testing. Simulate BLE devices, control responses, and accelerate development without physical hardware.",
   "type": "module",
   "main": "dist/index.js",
@@ -9,12 +9,14 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm,cjs",
+    "coverage": "c8 --reporter=text-lcov > coverage.lcov",
     "type-check": "tsc --noEmit",
-    "test": "tsx --test tests/**/*.test.ts",
+    "test": "c8 tsx --test tests/**/*.test.ts",
     "prepack": "npm run build && npm test",
     "release": "standard-version",
     "release:alpha": "standard-version --prerelease alpha",
-    "release:final": "standard-version --release-as minor"
+    "release:final": "standard-version --release-as minor",
+    "view-coverage": "c8 report --reporter=text"
   },
   "peerDependencies": {
     "react-native-ble-plx": "^2.x"
@@ -39,9 +41,17 @@
   "devDependencies": {
     "@types/node": "^24.0.3",
     "@types/react-native": "^0.72.8",
+    "c8": "^10.1.3",
     "standard-version": "^9.5.0",
     "tsup": "^8.5.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
+  },
+  "c8": {
+    "check-coverage": true,
+    "lines": 50,
+    "functions": 40,
+    "branches": 30,
+    "statements": 50
   }
 }

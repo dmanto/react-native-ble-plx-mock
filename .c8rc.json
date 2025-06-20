@@ -1,0 +1,5 @@
+{
+  "reporter": ["text", "html", "lcov"],
+  "exclude": ["tests/**"],
+  "temp-directory": "./coverage/tmp"
+}

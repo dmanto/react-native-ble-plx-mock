@@ -91,6 +91,7 @@ export class MockBleManager {
     private scanOptions: ScanOptions = {};
     private scanUUIDs: string[] | null = null;
     private scanInterval: NodeJS.Timeout | null = null;
+    private discoveryInterval: number = 800; // Default discovery interval in ms
 
     // Characteristic monitoring
     private monitoredCharacteristics: Map<string, CharacteristicListener[]> = new Map();
@@ -119,6 +120,9 @@ export class MockBleManager {
     private restoreStateIdentifier?: string;
     private restoreStateFunction?: (restoredState: RestoredState | null) => void;
 
+    // For error simulation
+    private scanErrorSimulation: Error | null = null;
+
     constructor(options?: BleManagerOptions) {
         if (options) {
             this.restoreStateIdentifier = options.restoreStateIdentifier;
@@ -134,6 +138,28 @@ export class MockBleManager {
         }
     }
 
+/**
+ * Simulate a scan error on next discovery event
+ */
+simulateScanError(error: Error) {
+    this.scanErrorSimulation = error;
+}
+
+/**
+ * Clear simulated scan errors
+ */
+clearScanError() {
+    this.scanErrorSimulation = null;
+}
+
+clearAllSimulatedErrors() {
+    this.scanErrorSimulation = null;
+    this.connectionErrors.clear();
+    this.readErrors.clear();
+    this.writeWithResponseErrors.clear();
+    this.writeWithoutResponseErrors.clear();
+    this.disconnectionErrors.clear();
+}
     /**
      * Simulate iOS state restoration by saving connected devices
      */
@@ -436,6 +462,12 @@ export class MockBleManager {
         if (!this.connectedDevices.has(deviceIdentifier)) {
             throw new Error(`Device ${deviceIdentifier} is not connected`);
         }
+        // Check if it should fail with an error
+        if (this.disconnectionErrors.has(deviceIdentifier)) {
+            const error = this.disconnectionErrors.get(deviceIdentifier)!;
+            this.notifyConnectionListeners(deviceIdentifier, error, device);
+            throw error;
+        }
 
         // Remove from connected devices
         this.connectedDevices.delete(deviceIdentifier);
@@ -630,25 +662,48 @@ private simulateDeviceDiscovery() {
         }
     });
 
-    // Simulate ongoing discovery
-    this.scanInterval = setInterval(() => {
-        if (!this.isScanning || !this.scanListener) return;
-
-        // Send random device (with duplicates allowed)
-        if (this.discoveredDevices.size > 0) {
-            const randomIndex = Math.floor(Math.random() * this.discoveredDevices.size);
-            const randomDevice = Array.from(this.discoveredDevices.values())[randomIndex];
-
-            if (this.scanOptions.allowDuplicates || Math.random() > 0.7) {
-                this.scanListener(null, randomDevice);
+    // Helper to start the interval
+    const startInterval = () => {
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+        }
+        this.scanInterval = setInterval(() => {
+            if (!this.isScanning || !this.scanListener) return;
+            // Simulate error if requested
+            if (this.scanErrorSimulation) {
+                this.scanListener(this.scanErrorSimulation, null);
+                this.scanErrorSimulation = null; // Clear after firing
+                return;
             }
-        }
+            // Send random device (with duplicates allowed)
+            if (this.discoveredDevices.size > 0) {
+                const randomIndex = Math.floor(Math.random() * this.discoveredDevices.size);
+                const randomDevice = Array.from(this.discoveredDevices.values())[randomIndex];
 
-        // Simulate occasional errors
-        if (Math.random() > 0.9) {
-            this.scanListener(new Error('Simulated scan error'), null);
+                if (this.scanOptions.allowDuplicates || Math.random() > 0.7) {
+                    this.scanListener(null, randomDevice);
+                }
+            }
+        }, this.discoveryInterval);
+    };
+
+    startInterval();
+}
+
+/**
+ * Set the discovery interval (ms) and restart the scan interval if scanning
+ */
+setDiscoveryInterval(interval: number): void {
+    this.discoveryInterval = interval;
+    if (this.isScanning) {
+        // Restart the scan interval with the new value
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+            this.scanInterval = null;
         }
-    }, 800);
+        // Re-run simulateDeviceDiscovery to restart interval
+        this.simulateDeviceDiscovery();
+    }
 }
     // ======================
     // Characteristic Reading
