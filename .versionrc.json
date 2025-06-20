@@ -1,0 +1,12 @@
+{
+  "types": [
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "test", "section": "Tests"},
+    {"type": "docs", "section": "Documentation"},
+    {"type": "chore", "hidden": true},
+    {"type": "refactor", "section": "Code Improvements"}
+  ],
+  "commitUrlFormat": "https://github.com/dmanto/react-native-ble-plx-mock/commit/{{hash}}",
+  "compareUrlFormat": "https://github.com/dmanto/react-native-ble-plx-mock/compare/{{previousTag}}...{{currentTag}}"
+}
