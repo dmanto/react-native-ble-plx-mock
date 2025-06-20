@@ -11,7 +11,8 @@ jobs:
     - run: npm run type-check
     - run: npm test
     - run: npm run build
-    - name: Upload Coverage
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage/lcov.info
+    - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: dmanto/react-native-ble-plx-mock
