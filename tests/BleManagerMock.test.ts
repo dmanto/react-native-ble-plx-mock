@@ -103,6 +103,8 @@ describe('MockBleManager', () => {
         // Verify services
         const services = await bleManager.servicesForDevice(heartMonitorId);
         assert.deepEqual(services.map(s => s.uuid), [serviceUUID, '180F']);
+        const servicesAgain = await device.services();
+        assert.deepEqual(servicesAgain.map(s => s.uuid), [serviceUUID, '180F']);
     });
 
     it('should support discoverAllServicesAndCharacteristics on device instances', async () => {

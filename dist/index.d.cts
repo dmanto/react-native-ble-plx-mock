@@ -18,7 +18,8 @@ interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
-    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
+    discoverAllServicesAndCharacteristics: () => Promise<MockDevice>;
+    services: () => Promise<Service[]>;
 }
 interface Characteristic {
     uuid: UUID;
@@ -188,7 +189,9 @@ declare class MockBleManager {
      * Notify connection listeners
      */
     private notifyConnectionListeners;
-    addMockDevice(device: MockDevice): void;
+    addMockDevice(device: Partial<MockDevice> & {
+        id: string;
+    }): void;
     removeMockDevice(deviceId: string): void;
     clearMockDevices(): void;
     /**

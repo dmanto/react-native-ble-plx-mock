@@ -392,9 +392,19 @@ var MockBleManager = class {
       device.isConnectable = true;
     }
     const mockDevice = {
-      ...device,
+      id: device.id,
+      name: device.name ?? null,
+      rssi: device.rssi ?? null,
+      mtu: device.mtu,
+      manufacturerData: device.manufacturerData ?? null,
+      serviceData: device.serviceData ?? null,
+      serviceUUIDs: device.serviceUUIDs ?? null,
+      isConnectable: device.isConnectable,
       discoverAllServicesAndCharacteristics: () => {
         return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      },
+      services: () => {
+        return this.servicesForDevice(device.id);
       }
     };
     this.discoveredDevices.set(device.id, mockDevice);

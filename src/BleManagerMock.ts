@@ -28,7 +28,8 @@ export interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean; // Added for connection simulation
-    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
+    discoverAllServicesAndCharacteristics: () => Promise<MockDevice>;
+    services: () => Promise<Service[]>;
 }
 
 export interface Characteristic {
@@ -590,17 +591,27 @@ export class MockBleManager {
     // ======================
     // Device Scanning
     // ======================
-    addMockDevice(device: MockDevice) {
+    addMockDevice(device: Partial<MockDevice> & { id: string }) {
         // Default to connectable if not specified
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
         }
-        // Attach discovery method
+        // Attach discovery method and ensure all required properties are present
         const mockDevice: MockDevice = {
-            ...device,
+            id: device.id,
+            name: device.name ?? null,
+            rssi: device.rssi ?? null,
+            mtu: device.mtu,
+            manufacturerData: device.manufacturerData ?? null,
+            serviceData: device.serviceData ?? null,
+            serviceUUIDs: device.serviceUUIDs ?? null,
+            isConnectable: device.isConnectable,
             discoverAllServicesAndCharacteristics: () => {
                 return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
-            }
+            },
+            services: () => {
+                return this.servicesForDevice(device.id);
+            },
         };
         this.discoveredDevices.set(device.id, mockDevice);
         // Automatically create service metadata
