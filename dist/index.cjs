@@ -391,7 +391,13 @@ var MockBleManager = class {
     if (device.isConnectable === void 0) {
       device.isConnectable = true;
     }
-    this.discoveredDevices.set(device.id, device);
+    const mockDevice = {
+      ...device,
+      discoverAllServicesAndCharacteristics: () => {
+        return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      }
+    };
+    this.discoveredDevices.set(device.id, mockDevice);
     if (device.serviceUUIDs) {
       const servicesMetadata = device.serviceUUIDs.map((uuid) => ({
         uuid,
@@ -412,9 +418,6 @@ var MockBleManager = class {
   updateMockDevice(deviceId, updates) {
     const device = this.discoveredDevices.get(deviceId);
     if (device) {
-      device.discoverAllServicesAndCharacteristics = () => {
-        return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
-      };
       this.discoveredDevices.set(deviceId, { ...device, ...updates });
     } else {
       throw new Error(`Device ${deviceId} not found`);

@@ -105,6 +105,25 @@ describe('MockBleManager', () => {
         assert.deepEqual(services.map(s => s.uuid), [serviceUUID, '180F']);
     });
 
+    it('should support discoverAllServicesAndCharacteristics on device instances', async () => {
+    // Get a device instance (could also be from scanning)
+    const device = await bleManager.connectToDevice(heartMonitorId);
+    assert.equal(device.name, 'Heart Monitor');
+    
+    // Verify the method exists
+    assert.ok(device.discoverAllServicesAndCharacteristics, 'Method should be attached to device');
+    
+    // Call the method directly on the device
+    const result = await device.discoverAllServicesAndCharacteristics!();
+    
+    // Verify it returns the device
+    assert.strictEqual(result, device);
+    
+    // Verify services were discovered
+    const services = await bleManager.servicesForDevice(heartMonitorId);
+    assert.deepEqual(services.map(s => s.uuid), [serviceUUID, '180F']);
+});
+
     it('should monitor characteristic changes', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);

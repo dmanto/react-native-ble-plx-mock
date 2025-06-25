@@ -595,7 +595,14 @@ export class MockBleManager {
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
         }
-        this.discoveredDevices.set(device.id, device);
+        // Attach discovery method
+        const mockDevice: MockDevice = {
+            ...device,
+            discoverAllServicesAndCharacteristics: () => {
+                return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+            }
+        };
+        this.discoveredDevices.set(device.id, mockDevice);
         // Automatically create service metadata
         if (device.serviceUUIDs) {
             const servicesMetadata: ServiceMetadata[] = device.serviceUUIDs.map(uuid => ({
@@ -619,10 +626,6 @@ export class MockBleManager {
     updateMockDevice(deviceId: string, updates: Partial<MockDevice>) {
         const device = this.discoveredDevices.get(deviceId);
         if (device) {
-            // Attach discoverAllServicesAndCharacteristics using the manager context
-            (device as any).discoverAllServicesAndCharacteristics = () => {
-                return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
-            };
             this.discoveredDevices.set(deviceId, { ...device, ...updates });
 
         } else {
