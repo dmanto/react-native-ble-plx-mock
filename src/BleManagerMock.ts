@@ -28,6 +28,7 @@ export interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean; // Added for connection simulation
+    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
 }
 
 export interface Characteristic {
@@ -127,7 +128,7 @@ export class MockBleManager {
         if (options) {
             this.restoreStateIdentifier = options.restoreStateIdentifier;
             this.restoreStateFunction = options.restoreStateFunction;
-            
+
             if (this.restoreStateIdentifier && this.restoreStateFunction) {
                 // Simulate iOS state restoration
                 setImmediate(() => {
@@ -138,39 +139,39 @@ export class MockBleManager {
         }
     }
 
-/**
- * Simulate a scan error on next discovery event
- */
-simulateScanError(error: Error) {
-    this.scanErrorSimulation = error;
-}
+    /**
+     * Simulate a scan error on next discovery event
+     */
+    simulateScanError(error: Error) {
+        this.scanErrorSimulation = error;
+    }
 
-/**
- * Clear simulated scan errors
- */
-clearScanError() {
-    this.scanErrorSimulation = null;
-}
+    /**
+     * Clear simulated scan errors
+     */
+    clearScanError() {
+        this.scanErrorSimulation = null;
+    }
 
-clearAllSimulatedErrors() {
-    this.scanErrorSimulation = null;
-    this.connectionErrors.clear();
-    this.readErrors.clear();
-    this.writeWithResponseErrors.clear();
-    this.writeWithoutResponseErrors.clear();
-    this.disconnectionErrors.clear();
-}
+    clearAllSimulatedErrors() {
+        this.scanErrorSimulation = null;
+        this.connectionErrors.clear();
+        this.readErrors.clear();
+        this.writeWithResponseErrors.clear();
+        this.writeWithoutResponseErrors.clear();
+        this.disconnectionErrors.clear();
+    }
     /**
      * Simulate iOS state restoration by saving connected devices
      */
     private saveRestorationState() {
         if (!this.restoreStateIdentifier) return;
-        
+
         const connectedDevices = Array.from(this.connectedDevices).map(id => {
             const device = this.discoveredDevices.get(id);
             return { ...device! }; // Return a copy
         });
-        
+
         restoredStateStore.set(this.restoreStateIdentifier, {
             connectedPeripherals: connectedDevices
         });
@@ -183,7 +184,7 @@ clearAllSimulatedErrors() {
     // ======================
     // MTU Negotiation
     // ======================
-    
+
     /**
      * Set the maximum MTU a device can support
      */
@@ -210,16 +211,16 @@ clearAllSimulatedErrors() {
 
         // Get device's maximum supported MTU
         const maxMTU = this.deviceMaxMTUs.get(deviceIdentifier) || 512;
-        
+
         // Determine actual MTU (minimum of requested and max supported)
         const actualMTU = Math.min(mtu, maxMTU);
-        
+
         // Update device MTU
         device.mtu = actualMTU;
-        
+
         // Notify MTU listeners
         this.notifyMTUChange(deviceIdentifier, actualMTU);
-        
+
         return device;
     }
 
@@ -233,10 +234,10 @@ clearAllSimulatedErrors() {
         if (!this.mtuListeners.has(deviceIdentifier)) {
             this.mtuListeners.set(deviceIdentifier, []);
         }
-        
+
         const listeners = this.mtuListeners.get(deviceIdentifier)!;
         listeners.push(listener);
-        
+
         return {
             remove: () => {
                 const updatedListeners = listeners.filter(l => l !== listener);
@@ -426,13 +427,13 @@ clearAllSimulatedErrors() {
         if (options?.requestMTU) {
             // Get device's maximum supported MTU
             const maxMTU = this.deviceMaxMTUs.get(deviceIdentifier) || 512;
-            
+
             // Determine actual MTU (minimum of requested and max supported)
             const actualMTU = Math.min(options.requestMTU, maxMTU);
-            
+
             // Update device MTU
             device.mtu = actualMTU;
-            
+
             // Notify MTU listeners
             this.notifyMTUChange(deviceIdentifier, actualMTU);
         }
@@ -618,7 +619,12 @@ clearAllSimulatedErrors() {
     updateMockDevice(deviceId: string, updates: Partial<MockDevice>) {
         const device = this.discoveredDevices.get(deviceId);
         if (device) {
+            // Attach discoverAllServicesAndCharacteristics using the manager context
+            (device as any).discoverAllServicesAndCharacteristics = () => {
+                return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+            };
             this.discoveredDevices.set(deviceId, { ...device, ...updates });
+
         } else {
             throw new Error(`Device ${deviceId} not found`);
         }
@@ -651,60 +657,60 @@ clearAllSimulatedErrors() {
         }
     }
 
-private simulateDeviceDiscovery() {
-    // Remove UUID filtering - send all devices in initial batch
-    const devices = Array.from(this.discoveredDevices.values());
+    private simulateDeviceDiscovery() {
+        // Remove UUID filtering - send all devices in initial batch
+        const devices = Array.from(this.discoveredDevices.values());
 
-    // Send initial devices (all devices, ignoring scan UUIDs)
-    devices.forEach(device => {
-        if (this.scanListener) {
-            this.scanListener(null, device);
-        }
-    });
-
-    // Helper to start the interval
-    const startInterval = () => {
-        if (this.scanInterval) {
-            clearInterval(this.scanInterval);
-        }
-        this.scanInterval = setInterval(() => {
-            if (!this.isScanning || !this.scanListener) return;
-            // Simulate error if requested
-            if (this.scanErrorSimulation) {
-                this.scanListener(this.scanErrorSimulation, null);
-                this.scanErrorSimulation = null; // Clear after firing
-                return;
+        // Send initial devices (all devices, ignoring scan UUIDs)
+        devices.forEach(device => {
+            if (this.scanListener) {
+                this.scanListener(null, device);
             }
-            // Send random device (with duplicates allowed)
-            if (this.discoveredDevices.size > 0) {
-                const randomIndex = Math.floor(Math.random() * this.discoveredDevices.size);
-                const randomDevice = Array.from(this.discoveredDevices.values())[randomIndex];
+        });
 
-                if (this.scanOptions.allowDuplicates || Math.random() > 0.7) {
-                    this.scanListener(null, randomDevice);
+        // Helper to start the interval
+        const startInterval = () => {
+            if (this.scanInterval) {
+                clearInterval(this.scanInterval);
+            }
+            this.scanInterval = setInterval(() => {
+                if (!this.isScanning || !this.scanListener) return;
+                // Simulate error if requested
+                if (this.scanErrorSimulation) {
+                    this.scanListener(this.scanErrorSimulation, null);
+                    this.scanErrorSimulation = null; // Clear after firing
+                    return;
                 }
-            }
-        }, this.discoveryInterval);
-    };
+                // Send random device (with duplicates allowed)
+                if (this.discoveredDevices.size > 0) {
+                    const randomIndex = Math.floor(Math.random() * this.discoveredDevices.size);
+                    const randomDevice = Array.from(this.discoveredDevices.values())[randomIndex];
 
-    startInterval();
-}
+                    if (this.scanOptions.allowDuplicates || Math.random() > 0.7) {
+                        this.scanListener(null, randomDevice);
+                    }
+                }
+            }, this.discoveryInterval);
+        };
 
-/**
- * Set the discovery interval (ms) and restart the scan interval if scanning
- */
-setDiscoveryInterval(interval: number): void {
-    this.discoveryInterval = interval;
-    if (this.isScanning) {
-        // Restart the scan interval with the new value
-        if (this.scanInterval) {
-            clearInterval(this.scanInterval);
-            this.scanInterval = null;
-        }
-        // Re-run simulateDeviceDiscovery to restart interval
-        this.simulateDeviceDiscovery();
+        startInterval();
     }
-}
+
+    /**
+     * Set the discovery interval (ms) and restart the scan interval if scanning
+     */
+    setDiscoveryInterval(interval: number): void {
+        this.discoveryInterval = interval;
+        if (this.isScanning) {
+            // Restart the scan interval with the new value
+            if (this.scanInterval) {
+                clearInterval(this.scanInterval);
+                this.scanInterval = null;
+            }
+            // Re-run simulateDeviceDiscovery to restart interval
+            this.simulateDeviceDiscovery();
+        }
+    }
     // ======================
     // Characteristic Reading
     // ======================

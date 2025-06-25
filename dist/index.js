@@ -386,6 +386,9 @@ var MockBleManager = class {
   updateMockDevice(deviceId, updates) {
     const device = this.discoveredDevices.get(deviceId);
     if (device) {
+      device.discoverAllServicesAndCharacteristics = () => {
+        return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      };
       this.discoveredDevices.set(deviceId, { ...device, ...updates });
     } else {
       throw new Error(`Device ${deviceId} not found`);

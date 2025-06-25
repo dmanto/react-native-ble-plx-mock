@@ -18,6 +18,7 @@ interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
+    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
 }
 interface Characteristic {
     uuid: UUID;
