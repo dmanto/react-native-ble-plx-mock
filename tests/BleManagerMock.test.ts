@@ -531,4 +531,309 @@ describe('MockBleManager', () => {
             assert.fail('Read error should be cleared');
         }
     });
+
+    it('should handle Buffer convenience methods', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Test setCharacteristicValueFromBuffer
+        const bufferValue = Buffer.from([0x01, 0x02, 0x03, 0x04]);
+        bleManager.setCharacteristicValueFromBuffer(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            bufferValue
+        );
+
+        const char1 = await bleManager.readCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+        assert.strictEqual(char1.value, bufferValue.toString('base64'));
+
+        // Test setCharacteristicValueFromBinary
+        const binaryString = '\x05\x06\x07\x08';
+        bleManager.setCharacteristicValueFromBinary(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            binaryString
+        );
+
+        const char2 = await bleManager.readCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+        const expectedBase64 = Buffer.from(binaryString, 'binary').toString('base64');
+        assert.strictEqual(char2.value, expectedBase64);
+    });
+
+    it('should handle write without response operations', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        let writtenValue = '';
+        const writeListener = bleManager.onCharacteristicWrite(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            value => writtenValue = value
+        );
+
+        // Test normal write without response
+        const testValue = Buffer.from([0x01, 0x02]).toString('base64');
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testValue
+        );
+        assert.strictEqual(writtenValue, testValue);
+
+        // Test write without response error simulation
+        const testError = new Error('Write without response failed');
+        bleManager.simulateWriteWithoutResponseError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testError
+        );
+
+        await assert.rejects(
+            () => bleManager.writeCharacteristicWithoutResponseForDevice(
+                heartMonitorId,
+                serviceUUID,
+                charUUID,
+                testValue
+            ),
+            { message: 'Write without response failed' }
+        );
+
+        // Test clearing write without response error
+        bleManager.clearWriteWithoutResponseError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+
+        // Should work again after clearing error
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testValue
+        );
+
+        writeListener.remove();
+    });
+
+    it('should handle write operation delays', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        const testValue = Buffer.from([0x01, 0x02]).toString('base64');
+
+        // Test write with response delay
+        bleManager.setWriteWithResponseDelay(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            50 // 50ms delay
+        );
+
+        const startTime = Date.now();
+        await bleManager.writeCharacteristicWithResponseForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testValue
+        );
+        const elapsedTime = Date.now() - startTime;
+        assert.ok(elapsedTime >= 45, 'Should have at least 45ms delay'); // Allow some margin
+
+        // Test write without response delay
+        bleManager.setWriteWithoutResponseDelay(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            30 // 30ms delay
+        );
+
+        const startTime2 = Date.now();
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testValue
+        );
+        const elapsedTime2 = Date.now() - startTime2;
+        assert.ok(elapsedTime2 >= 25, 'Should have at least 25ms delay'); // Allow some margin
+    });
+
+    it('should properly destroy and clean up resources', async () => {
+        // Setup with connections and monitoring
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.connectToDevice(thermoId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Set up monitoring
+        bleManager.setCharacteristicValueForReading(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            'test-value'
+        );
+
+        const monitoringSub = bleManager.monitorCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            () => {} // Empty listener
+        );
+
+        // Start scanning
+        bleManager.startDeviceScan(null, null, () => {});
+
+        // Start simulated notifications
+        bleManager.startSimulatedNotifications(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            10 // 10ms intervals
+        );
+
+        // Verify devices are connected
+        assert.ok(bleManager.isDeviceConnected(heartMonitorId));
+        assert.ok(bleManager.isDeviceConnected(thermoId));
+
+        // Listen for disconnection events
+        const disconnectionEvents: string[] = [];
+        const disconnectSub1 = bleManager.onDeviceDisconnected(
+            heartMonitorId,
+            (error) => {
+                if (error && error.message === 'Manager destroyed') {
+                    disconnectionEvents.push(heartMonitorId);
+                }
+            }
+        );
+        const disconnectSub2 = bleManager.onDeviceDisconnected(
+            thermoId,
+            (error) => {
+                if (error && error.message === 'Manager destroyed') {
+                    disconnectionEvents.push(thermoId);
+                }
+            }
+        );
+
+        // Call destroy
+        bleManager.destroy();
+
+        // Allow cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 20));
+
+        // Verify all devices were disconnected
+        assert.ok(!bleManager.isDeviceConnected(heartMonitorId));
+        assert.ok(!bleManager.isDeviceConnected(thermoId));
+        assert.strictEqual(disconnectionEvents.length, 2);
+        assert.ok(disconnectionEvents.includes(heartMonitorId));
+        assert.ok(disconnectionEvents.includes(thermoId));
+
+        // Verify scanning stopped
+        // Note: We can't directly test internal state, but destroy should have stopped scanning
+
+        // Clean up subscriptions
+        monitoringSub.remove();
+        disconnectSub1.remove();
+        disconnectSub2.remove();
+    });
+
+    it('should handle connection and disconnection delays', async () => {
+        // Test connection delay
+        bleManager.setConnectionDelay(heartMonitorId, 30);
+        
+        const startTime = Date.now();
+        await bleManager.connectToDevice(heartMonitorId);
+        const elapsedTime = Date.now() - startTime;
+        assert.ok(elapsedTime >= 25, 'Should have at least 25ms connection delay');
+        
+        assert.ok(bleManager.isDeviceConnected(heartMonitorId));
+        
+        // Test disconnection (no specific delay method, but testing the flow)
+        await bleManager.cancelDeviceConnection(heartMonitorId);
+        assert.ok(!bleManager.isDeviceConnected(heartMonitorId));
+    });
+
+    it('should handle characteristic error simulation during monitoring', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        let receivedError: Error | null = null;
+        const monitoringSub = bleManager.monitorCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            (error, char) => {
+                if (error) receivedError = error;
+            }
+        );
+
+        // Simulate characteristic error
+        const testError = new Error('Characteristic monitoring error');
+        bleManager.simulateCharacteristicError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            testError
+        );
+
+        // Allow error to propagate
+        await new Promise(resolve => setTimeout(resolve, 1));
+
+        assert.ok(receivedError);
+        assert.strictEqual(receivedError.message, 'Characteristic monitoring error');
+
+        monitoringSub.remove();
+    });
+
+    it('should handle edge cases in notifications', async () => {
+        // Setup
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Test notifications without listeners (should not crash)
+        bleManager.setCharacteristicValueForReading(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            'test-value'
+        );
+
+        bleManager.startSimulatedNotifications(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            5 // 5ms intervals
+        );
+
+        // Wait a bit then stop
+        await new Promise(resolve => setTimeout(resolve, 10));
+        bleManager.stopSimulatedNotifications(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+
+        // Test stopping notifications that don't exist (should not crash)
+        bleManager.stopSimulatedNotifications(
+            'non-existent-device',
+            'non-existent-service',
+            'non-existent-char'
+        );
+    });
 });
