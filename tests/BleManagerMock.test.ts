@@ -796,7 +796,7 @@ describe('MockBleManager', () => {
         await new Promise(resolve => setTimeout(resolve, 1));
 
         assert.ok(receivedError);
-        assert.strictEqual(receivedError.message, 'Characteristic monitoring error');
+        assert.strictEqual((receivedError as Error).message, 'Characteristic monitoring error');
 
         monitoringSub.remove();
     });
