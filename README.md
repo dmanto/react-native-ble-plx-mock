@@ -134,10 +134,14 @@ const manager2 = new MockBleManager({
 ### Jest Test Example
 
 ```typescript
-import { MockBleManager } from 'react-native-ble-plx-mock';
+// For CommonJS projects (most common)
+const { MockBleManager } = require('react-native-ble-plx-mock/dist/index.cjs');
+
+// Or for ES modules projects
+// import { MockBleManager } from 'react-native-ble-plx-mock';
 
 describe('BLE Integration', () => {
-  let bleManager: MockBleManager;
+  let bleManager: any; // Use 'any' type for simplicity in tests
 
   beforeEach(() => {
     bleManager = new MockBleManager();
@@ -154,7 +158,7 @@ describe('BLE Integration', () => {
 
     // Scan
     const foundDevices: any[] = [];
-    bleManager.startDeviceScan(null, null, (_, device) => {
+    bleManager.startDeviceScan(null, null, (_: any, device: any) => {
       if (device) foundDevices.push(device);
     });
 
@@ -167,6 +171,8 @@ describe('BLE Integration', () => {
   });
 });
 ```
+
+**Note**: If you encounter module import issues with Jest, use the CommonJS import path `/dist/index.cjs` which works reliably across different project setups.
 
 ## API Reference
 
