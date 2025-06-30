@@ -211,6 +211,16 @@ declare class MockBleManager {
      */
     setCharacteristicValueForReading(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, value: string): void;
     /**
+     * Set characteristic value from Buffer (convenience method)
+     * Automatically converts Buffer to base64 string as expected by react-native-ble-plx
+     */
+    setCharacteristicValueFromBuffer(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, bufferValue: Buffer): void;
+    /**
+     * Set characteristic value from binary string (convenience method)
+     * Automatically converts binary string to base64 as expected by react-native-ble-plx
+     */
+    setCharacteristicValueFromBinary(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, binaryValue: string): void;
+    /**
      * Simulate a read error for a characteristic
      */
     simulateCharacteristicReadError(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, error: Error): void;
@@ -267,6 +277,11 @@ declare class MockBleManager {
      */
     setWriteWithResponseDelay(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, delayMs: number): void;
     setWriteWithoutResponseDelay(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, delayMs: number): void;
+    /**
+     * Destroy the BLE manager and clean up resources
+     * Matches the original react-native-ble-plx destroy() method
+     */
+    destroy(): void;
 }
 
-export { type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type ConnectionOptions, type DeviceId, MockBleManager, type MockDevice, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type TransactionId, type UUID };
+export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type ConnectionOptions, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };

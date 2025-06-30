@@ -72,7 +72,7 @@ export interface BleManagerOptions {
 }
 
 type StateChangeListener = (state: State) => void;
-type Subscription = { remove: () => void };
+export type Subscription = { remove: () => void };
 type DeviceScanListener = (error: Error | null, device: MockDevice | null) => void;
 type CharacteristicListener = (error: Error | null, characteristic: Characteristic | null) => void;
 type MonitorSubscription = { remove: () => void };
@@ -774,6 +774,34 @@ export class MockBleManager {
     }
 
     /**
+     * Set characteristic value from Buffer (convenience method)
+     * Automatically converts Buffer to base64 string as expected by react-native-ble-plx
+     */
+    setCharacteristicValueFromBuffer(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        bufferValue: Buffer
+    ) {
+        const base64Value = bufferValue.toString('base64');
+        this.setCharacteristicValueForReading(deviceIdentifier, serviceUUID, characteristicUUID, base64Value);
+    }
+
+    /**
+     * Set characteristic value from binary string (convenience method)
+     * Automatically converts binary string to base64 as expected by react-native-ble-plx
+     */
+    setCharacteristicValueFromBinary(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        binaryValue: string
+    ) {
+        const base64Value = Buffer.from(binaryValue, 'binary').toString('base64');
+        this.setCharacteristicValueForReading(deviceIdentifier, serviceUUID, characteristicUUID, base64Value);
+    }
+
+    /**
      * Simulate a read error for a characteristic
      */
     simulateCharacteristicReadError(
@@ -1152,5 +1180,55 @@ export class MockBleManager {
     ) {
         const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
         this.writeWithoutResponseDelays.set(key, delayMs);
+    }
+
+    /**
+     * Destroy the BLE manager and clean up resources
+     * Matches the original react-native-ble-plx destroy() method
+     */
+    destroy() {
+        // Stop scanning if active
+        if (this.isScanning) {
+            this.stopDeviceScan();
+        }
+
+        // Clear all intervals
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+            this.scanInterval = null;
+        }
+
+        // Clear notification intervals
+        this.notificationIntervals.forEach(interval => clearInterval(interval));
+        this.notificationIntervals.clear();
+
+        // Disconnect all devices
+        Array.from(this.connectedDevices).forEach(deviceId => {
+            this.simulateDeviceDisconnection(deviceId, new Error('Manager destroyed'));
+        });
+
+        // Clear all state
+        this.stateListeners = [];
+        this.discoveredDevices.clear();
+        this.connectedDevices.clear();
+        this.monitoredCharacteristics.clear();
+        this.characteristicValues.clear();
+        this.connectionListeners.clear();
+        this.mtuListeners.clear();
+        this.deviceMaxMTUs.clear();
+        this.deviceServicesMetadata.clear();
+        this.discoveredServices.clear();
+        
+        // Clear all error and delay maps
+        this.readDelays.clear();
+        this.readErrors.clear();
+        this.writeWithResponseDelays.clear();
+        this.writeWithoutResponseDelays.clear();
+        this.writeWithResponseErrors.clear();
+        this.writeWithoutResponseErrors.clear();
+        this.writeListeners.clear();
+        this.connectionDelays.clear();
+        this.connectionErrors.clear();
+        this.disconnectionErrors.clear();
     }
 }

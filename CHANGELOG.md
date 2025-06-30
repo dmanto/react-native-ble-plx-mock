@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit message format and changelog generation.
+
+## [0.2.0-beta.7] - 2025-06-29
+
+### Added
+- **BREAKING**: Added `BleManager` export as alias for `MockBleManager` for drop-in replacement compatibility
+- **BREAKING**: Added `Device` export as alias for `MockDevice` for TypeScript compatibility
+- **BREAKING**: Exported `Subscription` type for external use
+- Added `destroy()` method for proper lifecycle management (matches original react-native-ble-plx API)
+- Added `setCharacteristicValueFromBuffer()` convenience method for Buffer-to-base64 conversion
+- Added `setCharacteristicValueFromBinary()` convenience method for binary string-to-base64 conversion
+
+### Changed
+- Improved TypeScript compatibility with react-native-ble-plx imports
+- Enhanced documentation with Buffer handling examples
+
+### Fixed
+- Fixed missing exports that prevented drop-in replacement usage
+- Fixed lifecycle management with proper cleanup in destroy() method
 
 ## [0.2.0-beta.6](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.0-beta.5...v0.2.0-beta.6) (2025-06-25)
 

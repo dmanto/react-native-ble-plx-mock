@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  BleManager: () => MockBleManager,
   MockBleManager: () => MockBleManager
 });
 module.exports = __toCommonJS(index_exports);
@@ -523,6 +524,22 @@ var MockBleManager = class {
     this.characteristicValues.set(key, value);
   }
   /**
+   * Set characteristic value from Buffer (convenience method)
+   * Automatically converts Buffer to base64 string as expected by react-native-ble-plx
+   */
+  setCharacteristicValueFromBuffer(deviceIdentifier, serviceUUID, characteristicUUID, bufferValue) {
+    const base64Value = bufferValue.toString("base64");
+    this.setCharacteristicValueForReading(deviceIdentifier, serviceUUID, characteristicUUID, base64Value);
+  }
+  /**
+   * Set characteristic value from binary string (convenience method)
+   * Automatically converts binary string to base64 as expected by react-native-ble-plx
+   */
+  setCharacteristicValueFromBinary(deviceIdentifier, serviceUUID, characteristicUUID, binaryValue) {
+    const base64Value = Buffer.from(binaryValue, "binary").toString("base64");
+    this.setCharacteristicValueForReading(deviceIdentifier, serviceUUID, characteristicUUID, base64Value);
+  }
+  /**
    * Simulate a read error for a characteristic
    */
   simulateCharacteristicReadError(deviceIdentifier, serviceUUID, characteristicUUID, error) {
@@ -749,8 +766,47 @@ var MockBleManager = class {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     this.writeWithoutResponseDelays.set(key, delayMs);
   }
+  /**
+   * Destroy the BLE manager and clean up resources
+   * Matches the original react-native-ble-plx destroy() method
+   */
+  destroy() {
+    if (this.isScanning) {
+      this.stopDeviceScan();
+    }
+    if (this.scanInterval) {
+      clearInterval(this.scanInterval);
+      this.scanInterval = null;
+    }
+    this.notificationIntervals.forEach((interval) => clearInterval(interval));
+    this.notificationIntervals.clear();
+    Array.from(this.connectedDevices).forEach((deviceId) => {
+      this.simulateDeviceDisconnection(deviceId, new Error("Manager destroyed"));
+    });
+    this.stateListeners = [];
+    this.discoveredDevices.clear();
+    this.connectedDevices.clear();
+    this.monitoredCharacteristics.clear();
+    this.characteristicValues.clear();
+    this.connectionListeners.clear();
+    this.mtuListeners.clear();
+    this.deviceMaxMTUs.clear();
+    this.deviceServicesMetadata.clear();
+    this.discoveredServices.clear();
+    this.readDelays.clear();
+    this.readErrors.clear();
+    this.writeWithResponseDelays.clear();
+    this.writeWithoutResponseDelays.clear();
+    this.writeWithResponseErrors.clear();
+    this.writeWithoutResponseErrors.clear();
+    this.writeListeners.clear();
+    this.connectionDelays.clear();
+    this.connectionErrors.clear();
+    this.disconnectionErrors.clear();
+  }
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  BleManager,
   MockBleManager
 });
