@@ -1,14 +1,20 @@
 # react-native-ble-plx-mock
-🔌 Mock implementation of react-native-ble-plx for testing. Simulate BLE devices, control responses, and accelerate development without physical hardware.
+
+🔌 **Comprehensive mock implementation of react-native-ble-plx for testing.** Simulate BLE devices, control responses, and accelerate development without physical hardware.
 
 [![CI Status](https://github.com/dmanto/react-native-ble-plx-mock/actions/workflows/ci.yml/badge.svg)](https://github.com/dmanto/react-native-ble-plx-mock/actions)
-
 [![Coverage Status](https://codecov.io/gh/dmanto/react-native-ble-plx-mock/branch/main/graph/badge.svg)](https://codecov.io/gh/dmanto/react-native-ble-plx-mock)
+[![npm version](https://badge.fury.io/js/react-native-ble-plx-mock.svg)](https://www.npmjs.com/package/react-native-ble-plx-mock)
 
-## Alpha Notice
-> **Important**: This is an initial alpha release (v0.1.0) with limited functionality. Core scanning features are implemented, with more functionality coming soon.
+## Current Status: Beta v0.2.x
 
-# React Native BLE PLX Mock Library
+✅ **Comprehensive BLE functionality** including scanning, connections, characteristic operations  
+✅ **Error simulation** for robust testing  
+✅ **Drop-in replacement** compatibility with react-native-ble-plx  
+✅ **90%+ test coverage** with extensive test suite  
+✅ **TypeScript support** with full type definitions  
+
+> **Note**: This is a stable beta release. The API is feature-complete and may receive minor enhancements before the 1.0 release.
 
 A comprehensive mocking library for `react-native-ble-plx` that enables reliable testing of Bluetooth Low Energy (BLE) functionality in React Native applications.
 
@@ -227,18 +233,16 @@ interface MockDevice {
 }
 ```
 
-## Features
-
-- Fully mockable BLE manager with identical API to `react-native-ble-plx`
-- Simulate device discovery, connections, and disconnections
-- Mock characteristic read/write operations with response simulation
-- Simulate errors during scanning, connections, and operations
-- Control Bluetooth adapter state changes
-- Device state restoration support
-- Configurable scan intervals for faster testing
-
 ## Contributing
 
-- PRs and issues welcome! See contribution guide for details
+PRs and issues welcome! See [contribution guide](CONTRIBUTING.md) for details.
 
-> ** Note ** Requires Node 22+ and TypeScript 5+
+## Requirements
+
+- Node.js 22+
+- TypeScript 5+
+- React Native with react-native-ble-plx
+
+## License
+
+MIT - See [LICENSE](LICENSE) file for details.
