@@ -32,6 +32,32 @@ export interface MockDevice {
     services: () => Promise<Service[]>;
 }
 
+export interface Descriptor {
+    uuid: UUID;
+    characteristicUUID: UUID;
+    serviceUUID: UUID;
+    deviceID: DeviceId;
+    value: string | null;
+}
+
+export interface DescriptorMetadata {
+    uuid: UUID;
+    value?: string | null;
+    isReadable?: boolean;
+    isWritable?: boolean;
+}
+
+export interface CharacteristicProperties {
+    broadcast?: boolean;
+    read?: boolean;
+    writeWithoutResponse?: boolean;
+    write?: boolean;
+    notify?: boolean;
+    indicate?: boolean;
+    authenticatedSignedWrites?: boolean;
+    extendedProperties?: boolean;
+}
+
 export interface Characteristic {
     uuid: UUID;
     serviceUUID: UUID;
@@ -39,11 +65,19 @@ export interface Characteristic {
     value: string | null;
     isNotifiable: boolean;
     isIndicatable: boolean;
+    isNotifying?: boolean;
+    isReadable?: boolean;
+    isWritableWithResponse?: boolean;
+    isWritableWithoutResponse?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: Descriptor[];
 }
+
 export interface Service {
     uuid: UUID;
     deviceID: DeviceId;
-    // Add other properties as needed
+    isPrimary?: boolean;
+    includedServices?: string[];
 }
 
 export interface CharacteristicMetadata {
@@ -52,7 +86,10 @@ export interface CharacteristicMetadata {
     isWritableWithResponse?: boolean;
     isWritableWithoutResponse?: boolean;
     isNotifiable?: boolean;
-    // Add other properties as needed
+    isIndicatable?: boolean;
+    isNotifying?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: DescriptorMetadata[];
 }
 
 export interface ServiceMetadata {
@@ -262,6 +299,8 @@ export class MockBleManager {
     // Service discovery
     private deviceServicesMetadata: Map<DeviceId, ServiceMetadata[]> = new Map();
     private discoveredServices: Map<DeviceId, Service[]> = new Map();
+    private descriptorValues: Map<string, string> = new Map();
+    private descriptorErrors: Map<string, Error> = new Map();
 
     // ======================
     // Service Discovery
@@ -747,16 +786,39 @@ export class MockBleManager {
             return this.simulateReadOperation(key, () => Promise.reject(error));
         }
 
+        // Get characteristic metadata to determine properties
+        const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
+        const service = servicesMetadata.find(s => s.uuid === serviceUUID);
+        const charMetadata = service?.characteristics.find(c => c.uuid === characteristicUUID);
+
         // Get the current value
         const value = this.characteristicValues.get(key) || null;
+
+        // Create descriptors if they exist in metadata
+        let descriptors: Descriptor[] | undefined;
+        if (charMetadata?.descriptors) {
+            descriptors = charMetadata.descriptors.map(desc => ({
+                uuid: desc.uuid,
+                characteristicUUID,
+                serviceUUID,
+                deviceID: deviceIdentifier,
+                value: this.descriptorValues.get(this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, desc.uuid)) || desc.value || null
+            }));
+        }
 
         return this.simulateReadOperation(key, () => Promise.resolve({
             uuid: characteristicUUID,
             serviceUUID,
             deviceID: deviceIdentifier,
             value,
-            isNotifiable: true,
-            isIndicatable: false
+            isNotifiable: charMetadata?.isNotifiable ?? true,
+            isIndicatable: charMetadata?.isIndicatable ?? false,
+            isNotifying: charMetadata?.isNotifying ?? false,
+            isReadable: charMetadata?.isReadable ?? true,
+            isWritableWithResponse: charMetadata?.isWritableWithResponse ?? false,
+            isWritableWithoutResponse: charMetadata?.isWritableWithoutResponse ?? false,
+            properties: charMetadata?.properties,
+            descriptors
         }));
     }
 
@@ -1182,6 +1244,128 @@ export class MockBleManager {
         this.writeWithoutResponseDelays.set(key, delayMs);
     }
 
+    // ======================
+    // Descriptor Operations
+    // ======================
+
+    /**
+     * Read descriptor value
+     */
+    async readDescriptorForCharacteristic(
+        characteristicUUID: UUID,
+        serviceUUID: UUID,
+        deviceIdentifier: DeviceId,
+        descriptorUUID: UUID
+    ): Promise<Descriptor> {
+        // Ensure device is connected
+        if (!this.isDeviceConnected(deviceIdentifier)) {
+            throw new Error(`Device ${deviceIdentifier} is not connected`);
+        }
+
+        const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+
+        // Check for simulated error
+        if (this.descriptorErrors.has(key)) {
+            const error = this.descriptorErrors.get(key)!;
+            throw error;
+        }
+
+        const value = this.descriptorValues.get(key) || null;
+
+        return {
+            uuid: descriptorUUID,
+            characteristicUUID,
+            serviceUUID,
+            deviceID: deviceIdentifier,
+            value
+        };
+    }
+
+    /**
+     * Write descriptor value
+     */
+    async writeDescriptorForCharacteristic(
+        characteristicUUID: UUID,
+        serviceUUID: UUID,
+        deviceIdentifier: DeviceId,
+        descriptorUUID: UUID,
+        base64Value: string
+    ): Promise<Descriptor> {
+        // Ensure device is connected
+        if (!this.isDeviceConnected(deviceIdentifier)) {
+            throw new Error(`Device ${deviceIdentifier} is not connected`);
+        }
+
+        const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+
+        // Check for simulated error
+        if (this.descriptorErrors.has(key)) {
+            const error = this.descriptorErrors.get(key)!;
+            throw error;
+        }
+
+        // Update the descriptor value
+        this.descriptorValues.set(key, base64Value);
+
+        return {
+            uuid: descriptorUUID,
+            characteristicUUID,
+            serviceUUID,
+            deviceID: deviceIdentifier,
+            value: base64Value
+        };
+    }
+
+    /**
+     * Set descriptor value for testing
+     */
+    setDescriptorValue(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        descriptorUUID: UUID,
+        value: string
+    ) {
+        const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+        this.descriptorValues.set(key, value);
+    }
+
+    /**
+     * Simulate descriptor read/write error
+     */
+    simulateDescriptorError(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        descriptorUUID: UUID,
+        error: Error
+    ) {
+        const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+        this.descriptorErrors.set(key, error);
+    }
+
+    /**
+     * Clear descriptor error
+     */
+    clearDescriptorError(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        descriptorUUID: UUID
+    ) {
+        const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+        this.descriptorErrors.delete(key);
+    }
+
+    private getDescriptorKey(
+        deviceId: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        descriptorUUID: UUID
+    ): string {
+        return `${deviceId}|${serviceUUID}|${characteristicUUID}|${descriptorUUID}`;
+    }
+
     /**
      * Destroy the BLE manager and clean up resources
      * Matches the original react-native-ble-plx destroy() method
@@ -1230,5 +1414,7 @@ export class MockBleManager {
         this.connectionDelays.clear();
         this.connectionErrors.clear();
         this.disconnectionErrors.clear();
+        this.descriptorValues.clear();
+        this.descriptorErrors.clear();
     }
 }

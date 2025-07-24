@@ -41,6 +41,8 @@ var MockBleManager = class {
     // Service discovery
     this.deviceServicesMetadata = /* @__PURE__ */ new Map();
     this.discoveredServices = /* @__PURE__ */ new Map();
+    this.descriptorValues = /* @__PURE__ */ new Map();
+    this.descriptorErrors = /* @__PURE__ */ new Map();
     if (options) {
       this.restoreStateIdentifier = options.restoreStateIdentifier;
       this.restoreStateFunction = options.restoreStateFunction;
@@ -479,14 +481,33 @@ var MockBleManager = class {
       const error = this.readErrors.get(key);
       return this.simulateReadOperation(key, () => Promise.reject(error));
     }
+    const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
+    const service = servicesMetadata.find((s) => s.uuid === serviceUUID);
+    const charMetadata = service?.characteristics.find((c) => c.uuid === characteristicUUID);
     const value = this.characteristicValues.get(key) || null;
+    let descriptors;
+    if (charMetadata?.descriptors) {
+      descriptors = charMetadata.descriptors.map((desc) => ({
+        uuid: desc.uuid,
+        characteristicUUID,
+        serviceUUID,
+        deviceID: deviceIdentifier,
+        value: this.descriptorValues.get(this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, desc.uuid)) || desc.value || null
+      }));
+    }
     return this.simulateReadOperation(key, () => Promise.resolve({
       uuid: characteristicUUID,
       serviceUUID,
       deviceID: deviceIdentifier,
       value,
-      isNotifiable: true,
-      isIndicatable: false
+      isNotifiable: charMetadata?.isNotifiable ?? true,
+      isIndicatable: charMetadata?.isIndicatable ?? false,
+      isNotifying: charMetadata?.isNotifying ?? false,
+      isReadable: charMetadata?.isReadable ?? true,
+      isWritableWithResponse: charMetadata?.isWritableWithResponse ?? false,
+      isWritableWithoutResponse: charMetadata?.isWritableWithoutResponse ?? false,
+      properties: charMetadata?.properties,
+      descriptors
     }));
   }
   /**
@@ -739,6 +760,75 @@ var MockBleManager = class {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     this.writeWithoutResponseDelays.set(key, delayMs);
   }
+  // ======================
+  // Descriptor Operations
+  // ======================
+  /**
+   * Read descriptor value
+   */
+  async readDescriptorForCharacteristic(characteristicUUID, serviceUUID, deviceIdentifier, descriptorUUID) {
+    if (!this.isDeviceConnected(deviceIdentifier)) {
+      throw new Error(`Device ${deviceIdentifier} is not connected`);
+    }
+    const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+    if (this.descriptorErrors.has(key)) {
+      const error = this.descriptorErrors.get(key);
+      throw error;
+    }
+    const value = this.descriptorValues.get(key) || null;
+    return {
+      uuid: descriptorUUID,
+      characteristicUUID,
+      serviceUUID,
+      deviceID: deviceIdentifier,
+      value
+    };
+  }
+  /**
+   * Write descriptor value
+   */
+  async writeDescriptorForCharacteristic(characteristicUUID, serviceUUID, deviceIdentifier, descriptorUUID, base64Value) {
+    if (!this.isDeviceConnected(deviceIdentifier)) {
+      throw new Error(`Device ${deviceIdentifier} is not connected`);
+    }
+    const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+    if (this.descriptorErrors.has(key)) {
+      const error = this.descriptorErrors.get(key);
+      throw error;
+    }
+    this.descriptorValues.set(key, base64Value);
+    return {
+      uuid: descriptorUUID,
+      characteristicUUID,
+      serviceUUID,
+      deviceID: deviceIdentifier,
+      value: base64Value
+    };
+  }
+  /**
+   * Set descriptor value for testing
+   */
+  setDescriptorValue(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID, value) {
+    const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+    this.descriptorValues.set(key, value);
+  }
+  /**
+   * Simulate descriptor read/write error
+   */
+  simulateDescriptorError(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID, error) {
+    const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+    this.descriptorErrors.set(key, error);
+  }
+  /**
+   * Clear descriptor error
+   */
+  clearDescriptorError(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID) {
+    const key = this.getDescriptorKey(deviceIdentifier, serviceUUID, characteristicUUID, descriptorUUID);
+    this.descriptorErrors.delete(key);
+  }
+  getDescriptorKey(deviceId, serviceUUID, characteristicUUID, descriptorUUID) {
+    return `${deviceId}|${serviceUUID}|${characteristicUUID}|${descriptorUUID}`;
+  }
   /**
    * Destroy the BLE manager and clean up resources
    * Matches the original react-native-ble-plx destroy() method
@@ -776,6 +866,8 @@ var MockBleManager = class {
     this.connectionDelays.clear();
     this.connectionErrors.clear();
     this.disconnectionErrors.clear();
+    this.descriptorValues.clear();
+    this.descriptorErrors.clear();
   }
 };
 export {

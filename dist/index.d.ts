@@ -21,6 +21,29 @@ interface MockDevice {
     discoverAllServicesAndCharacteristics: () => Promise<MockDevice>;
     services: () => Promise<Service[]>;
 }
+interface Descriptor {
+    uuid: UUID;
+    characteristicUUID: UUID;
+    serviceUUID: UUID;
+    deviceID: DeviceId;
+    value: string | null;
+}
+interface DescriptorMetadata {
+    uuid: UUID;
+    value?: string | null;
+    isReadable?: boolean;
+    isWritable?: boolean;
+}
+interface CharacteristicProperties {
+    broadcast?: boolean;
+    read?: boolean;
+    writeWithoutResponse?: boolean;
+    write?: boolean;
+    notify?: boolean;
+    indicate?: boolean;
+    authenticatedSignedWrites?: boolean;
+    extendedProperties?: boolean;
+}
 interface Characteristic {
     uuid: UUID;
     serviceUUID: UUID;
@@ -28,10 +51,18 @@ interface Characteristic {
     value: string | null;
     isNotifiable: boolean;
     isIndicatable: boolean;
+    isNotifying?: boolean;
+    isReadable?: boolean;
+    isWritableWithResponse?: boolean;
+    isWritableWithoutResponse?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: Descriptor[];
 }
 interface Service {
     uuid: UUID;
     deviceID: DeviceId;
+    isPrimary?: boolean;
+    includedServices?: string[];
 }
 interface CharacteristicMetadata {
     uuid: UUID;
@@ -39,6 +70,10 @@ interface CharacteristicMetadata {
     isWritableWithResponse?: boolean;
     isWritableWithoutResponse?: boolean;
     isNotifiable?: boolean;
+    isIndicatable?: boolean;
+    isNotifying?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: DescriptorMetadata[];
 }
 interface ServiceMetadata {
     uuid: UUID;
@@ -126,6 +161,8 @@ declare class MockBleManager {
     private notifyMTUChange;
     private deviceServicesMetadata;
     private discoveredServices;
+    private descriptorValues;
+    private descriptorErrors;
     /**
      * Set services and characteristics metadata for a device
      */
@@ -278,10 +315,31 @@ declare class MockBleManager {
     setWriteWithResponseDelay(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, delayMs: number): void;
     setWriteWithoutResponseDelay(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, delayMs: number): void;
     /**
+     * Read descriptor value
+     */
+    readDescriptorForCharacteristic(characteristicUUID: UUID, serviceUUID: UUID, deviceIdentifier: DeviceId, descriptorUUID: UUID): Promise<Descriptor>;
+    /**
+     * Write descriptor value
+     */
+    writeDescriptorForCharacteristic(characteristicUUID: UUID, serviceUUID: UUID, deviceIdentifier: DeviceId, descriptorUUID: UUID, base64Value: string): Promise<Descriptor>;
+    /**
+     * Set descriptor value for testing
+     */
+    setDescriptorValue(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, descriptorUUID: UUID, value: string): void;
+    /**
+     * Simulate descriptor read/write error
+     */
+    simulateDescriptorError(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, descriptorUUID: UUID, error: Error): void;
+    /**
+     * Clear descriptor error
+     */
+    clearDescriptorError(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, descriptorUUID: UUID): void;
+    private getDescriptorKey;
+    /**
      * Destroy the BLE manager and clean up resources
      * Matches the original react-native-ble-plx destroy() method
      */
     destroy(): void;
 }
 
-export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type ConnectionOptions, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };
+export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type CharacteristicProperties, type ConnectionOptions, type Descriptor, type DescriptorMetadata, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };

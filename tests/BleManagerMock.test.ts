@@ -836,4 +836,233 @@ describe('MockBleManager', () => {
             'non-existent-char'
         );
     });
+
+    it('should support comprehensive characteristic properties and descriptors', async () => {
+        // Define services with full characteristic metadata including descriptors
+        const servicesMetadata = [
+            {
+                uuid: serviceUUID, // '180D' Heart Rate Service
+                characteristics: [
+                    {
+                        uuid: charUUID, // '2A37' Heart Rate Measurement
+                        isReadable: true,
+                        isWritableWithResponse: false,
+                        isWritableWithoutResponse: false,
+                        isNotifiable: true,
+                        isIndicatable: false,
+                        isNotifying: false,
+                        properties: {
+                            read: true,
+                            notify: true,
+                            indicate: false,
+                            write: false,
+                            writeWithoutResponse: false
+                        },
+                        descriptors: [
+                            {
+                                uuid: '2902', // Client Characteristic Configuration
+                                value: Buffer.from([0x00, 0x00]).toString('base64'), // Notifications disabled initially
+                                isReadable: true,
+                                isWritable: true
+                            },
+                            {
+                                uuid: '2901', // Characteristic User Description
+                                value: Buffer.from('Heart Rate Measurement', 'utf8').toString('base64'),
+                                isReadable: true,
+                                isWritable: false
+                            }
+                        ]
+                    },
+                    {
+                        uuid: '2A39', // Heart Rate Control Point
+                        isReadable: false,
+                        isWritableWithResponse: true,
+                        isWritableWithoutResponse: false,
+                        isNotifiable: false,
+                        isIndicatable: true, // This characteristic uses indications!
+                        isNotifying: false,
+                        properties: {
+                            read: false,
+                            write: true,
+                            indicate: true,
+                            notify: false,
+                            writeWithoutResponse: false
+                        },
+                        descriptors: [
+                            {
+                                uuid: '2902', // Client Characteristic Configuration
+                                value: Buffer.from([0x00, 0x00]).toString('base64'),
+                                isReadable: true,
+                                isWritable: true
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                uuid: '180F', // Battery Service
+                characteristics: [
+                    {
+                        uuid: '2A19', // Battery Level
+                        isReadable: true,
+                        isWritableWithResponse: false,
+                        isWritableWithoutResponse: false,
+                        isNotifiable: true,
+                        isIndicatable: false,
+                        isNotifying: false,
+                        properties: {
+                            read: true,
+                            notify: true
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Set the services metadata
+        bleManager.setDeviceServices(heartMonitorId, servicesMetadata);
+
+        // Connect and discover
+        await bleManager.connectToDevice(heartMonitorId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+
+        // Set initial characteristic values
+        bleManager.setCharacteristicValueForReading(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            Buffer.from([0x06, 0x48]).toString('base64') // Heart rate: 72 BPM
+        );
+
+        // Set descriptor values
+        bleManager.setDescriptorValue(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            '2902',
+            Buffer.from([0x01, 0x00]).toString('base64') // Enable notifications
+        );
+
+        // Read characteristic and verify all properties are present
+        const char = await bleManager.readCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            charUUID
+        );
+
+        // Verify all properties are correctly set
+        assert.strictEqual(char.uuid, charUUID);
+        assert.strictEqual(char.serviceUUID, serviceUUID);
+        assert.strictEqual(char.deviceID, heartMonitorId);
+        assert.strictEqual(char.isReadable, true);
+        assert.strictEqual(char.isWritableWithResponse, false);
+        assert.strictEqual(char.isWritableWithoutResponse, false);
+        assert.strictEqual(char.isNotifiable, true);
+        assert.strictEqual(char.isIndicatable, false);
+        assert.strictEqual(char.isNotifying, false);
+
+        // Verify properties object
+        assert.ok(char.properties);
+        assert.strictEqual(char.properties.read, true);
+        assert.strictEqual(char.properties.notify, true);
+        assert.strictEqual(char.properties.indicate, false);
+        assert.strictEqual(char.properties.write, false);
+        assert.strictEqual(char.properties.writeWithoutResponse, false);
+
+        // Verify descriptors are present
+        assert.ok(char.descriptors);
+        assert.strictEqual(char.descriptors.length, 2);
+
+        const cccdDescriptor = char.descriptors.find(d => d.uuid === '2902');
+        assert.ok(cccdDescriptor);
+        assert.strictEqual(cccdDescriptor.value, Buffer.from([0x01, 0x00]).toString('base64'));
+
+        const userDescDescriptor = char.descriptors.find(d => d.uuid === '2901');
+        assert.ok(userDescDescriptor);
+        assert.strictEqual(userDescDescriptor.value, Buffer.from('Heart Rate Measurement', 'utf8').toString('base64'));
+
+        // Test descriptor operations
+        const readDescriptor = await bleManager.readDescriptorForCharacteristic(
+            charUUID,
+            serviceUUID,
+            heartMonitorId,
+            '2902'
+        );
+        assert.strictEqual(readDescriptor.uuid, '2902');
+        assert.strictEqual(readDescriptor.value, Buffer.from([0x01, 0x00]).toString('base64'));
+
+        // Test descriptor write
+        const newDescriptorValue = Buffer.from([0x02, 0x00]).toString('base64'); // Enable indications
+        const writtenDescriptor = await bleManager.writeDescriptorForCharacteristic(
+            charUUID,
+            serviceUUID,
+            heartMonitorId,
+            '2902',
+            newDescriptorValue
+        );
+        assert.strictEqual(writtenDescriptor.value, newDescriptorValue);
+
+        // Verify the value was updated
+        const updatedDescriptor = await bleManager.readDescriptorForCharacteristic(
+            charUUID,
+            serviceUUID,
+            heartMonitorId,
+            '2902'
+        );
+        assert.strictEqual(updatedDescriptor.value, newDescriptorValue);
+
+        // Test indication-capable characteristic
+        const controlPointChar = await bleManager.readCharacteristicForDevice(
+            heartMonitorId,
+            serviceUUID,
+            '2A39'
+        );
+        assert.strictEqual(controlPointChar.isIndicatable, true);
+        assert.strictEqual(controlPointChar.isNotifiable, false);
+        assert.strictEqual(controlPointChar.isReadable, false);
+        assert.strictEqual(controlPointChar.isWritableWithResponse, true);
+
+        // Test characteristics for service
+        const characteristics = await bleManager.characteristicsForService(serviceUUID, heartMonitorId);
+        assert.strictEqual(characteristics.length, 2);
+        
+        const hrMeasurement = characteristics.find(c => c.uuid === charUUID);
+        assert.ok(hrMeasurement);
+        assert.strictEqual(hrMeasurement.isIndicatable, false);
+        assert.strictEqual(hrMeasurement.isNotifiable, true);
+        
+        const controlPoint = characteristics.find(c => c.uuid === '2A39');
+        assert.ok(controlPoint);
+        assert.strictEqual(controlPoint.isIndicatable, true);
+        assert.strictEqual(controlPoint.isNotifiable, false);
+
+        // Test descriptor error simulation
+        bleManager.simulateDescriptorError(
+            heartMonitorId,
+            serviceUUID,
+            charUUID,
+            '2902',
+            new Error('Descriptor read error')
+        );
+
+        await assert.rejects(
+            () => bleManager.readDescriptorForCharacteristic(
+                charUUID,
+                serviceUUID,
+                heartMonitorId,
+                '2902'
+            ),
+            { message: 'Descriptor read error' }
+        );
+
+        // Clear error and verify it works again
+        bleManager.clearDescriptorError(heartMonitorId, serviceUUID, charUUID, '2902');
+        const finalDescriptor = await bleManager.readDescriptorForCharacteristic(
+            charUUID,
+            serviceUUID,
+            heartMonitorId,
+            '2902'
+        );
+        assert.ok(finalDescriptor);
+    });
 });
