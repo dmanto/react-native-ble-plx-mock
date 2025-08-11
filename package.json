@@ -16,6 +16,7 @@
     "prepack": "npm run build && npm test",
     "release": "standard-version",
     "release:alpha": "standard-version --prerelease alpha",
+    "release:beta": "standard-version --prerelease beta",
     "release:final": "standard-version --release-as minor",
     "view-coverage": "c8 report --reporter=text"
   },
