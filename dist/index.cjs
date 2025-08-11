@@ -66,7 +66,6 @@ var MockBleManager = class {
     this.mtuListeners = /* @__PURE__ */ new Map();
     this.deviceMaxMTUs = /* @__PURE__ */ new Map();
     // Service discovery
-    this.deviceServicesMetadata = /* @__PURE__ */ new Map();
     this.discoveredServices = /* @__PURE__ */ new Map();
     this.descriptorValues = /* @__PURE__ */ new Map();
     this.descriptorErrors = /* @__PURE__ */ new Map();
@@ -171,12 +170,6 @@ var MockBleManager = class {
   // Service Discovery
   // ======================
   /**
-   * Set services and characteristics metadata for a device
-   */
-  setDeviceServices(deviceId, services) {
-    this.deviceServicesMetadata.set(deviceId, services);
-  }
-  /**
    * Discover all services and characteristics for a device
    */
   async discoverAllServicesAndCharacteristicsForDevice(deviceIdentifier) {
@@ -187,8 +180,8 @@ var MockBleManager = class {
     if (!device) {
       throw new Error("Device not found");
     }
-    const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
-    const services = servicesMetadata.map((service) => ({
+    const staticServices = device.services || [];
+    const services = staticServices.map((service) => ({
       uuid: service.uuid,
       deviceID: deviceIdentifier
     }));
@@ -196,7 +189,7 @@ var MockBleManager = class {
     return device;
   }
   /**
-   * Get discovered services for a device
+   * Get services for a device (must call discoverAllServicesAndCharacteristicsForDevice first)
    */
   async servicesForDevice(deviceIdentifier) {
     if (!this.discoveredServices.has(deviceIdentifier)) {
@@ -208,8 +201,11 @@ var MockBleManager = class {
    * Get characteristics for a service
    */
   async characteristicsForService(serviceUUID, deviceIdentifier) {
-    const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
-    const service = servicesMetadata.find((s) => s.uuid === serviceUUID);
+    const device = this.discoveredDevices.get(deviceIdentifier);
+    if (!device || !device.services) {
+      throw new Error(`Device ${deviceIdentifier} not found or has no services`);
+    }
+    const service = device.services.find((s) => s.uuid === serviceUUID);
     if (!service) {
       throw new Error(`Service ${serviceUUID} not found`);
     }
@@ -398,26 +394,16 @@ var MockBleManager = class {
       id: device.id,
       name: device.name ?? null,
       rssi: device.rssi ?? null,
-      mtu: device.mtu,
+      mtu: device.mtu || 517,
+      // Default MTU
       manufacturerData: device.manufacturerData ?? null,
       serviceData: device.serviceData ?? null,
-      serviceUUIDs: device.serviceUUIDs ?? null,
+      serviceUUIDs: device.services ? device.services.map((s) => s.uuid) : device.serviceUUIDs ?? null,
       isConnectable: device.isConnectable,
-      discoverAllServicesAndCharacteristics: () => {
-        return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
-      },
-      services: () => {
-        return this.servicesForDevice(device.id);
-      }
+      services: device.services
+      // Static services data for mocking
     };
     this.discoveredDevices.set(device.id, mockDevice);
-    if (device.serviceUUIDs) {
-      const servicesMetadata = device.serviceUUIDs.map((uuid) => ({
-        uuid,
-        characteristics: []
-      }));
-      this.setDeviceServices(device.id, servicesMetadata);
-    }
   }
   removeMockDevice(deviceId) {
     this.discoveredDevices.delete(deviceId);
@@ -508,8 +494,9 @@ var MockBleManager = class {
       const error = this.readErrors.get(key);
       return this.simulateReadOperation(key, () => Promise.reject(error));
     }
-    const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
-    const service = servicesMetadata.find((s) => s.uuid === serviceUUID);
+    const device = this.discoveredDevices.get(deviceIdentifier);
+    const staticServices = device?.services || [];
+    const service = staticServices.find((s) => s.uuid === serviceUUID);
     const charMetadata = service?.characteristics.find((c) => c.uuid === characteristicUUID);
     const value = this.characteristicValues.get(key) || null;
     let descriptors;
@@ -881,7 +868,6 @@ var MockBleManager = class {
     this.connectionListeners.clear();
     this.mtuListeners.clear();
     this.deviceMaxMTUs.clear();
-    this.deviceServicesMetadata.clear();
     this.discoveredServices.clear();
     this.readDelays.clear();
     this.readErrors.clear();

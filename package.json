@@ -11,7 +11,8 @@
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "coverage": "c8 --reporter=text-lcov > coverage.lcov",
     "type-check": "tsc --noEmit",
-    "test": "c8 --reporter=lcov --reporter=text tsx --test tests/*.test.ts",
+    "test": "c8 --reporter=lcov --reporter=text tsx --test tests/*.node.test.ts",
+    "test:jest": "jest",
     "prepack": "npm run build && npm test",
     "release": "standard-version",
     "release:alpha": "standard-version --prerelease alpha",
@@ -39,10 +40,13 @@
   },
   "homepage": "https://github.com/dmanto/react-native-ble-plx-mock#readme",
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.3",
     "@types/react-native": "^0.72.8",
     "c8": "^10.1.3",
+    "jest": "^30.0.5",
     "standard-version": "^9.5.0",
+    "ts-jest": "^29.4.1",
     "tsup": "^8.5.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

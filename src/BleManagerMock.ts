@@ -28,8 +28,7 @@ export interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean; // Added for connection simulation
-    discoverAllServicesAndCharacteristics: () => Promise<MockDevice>;
-    services: () => Promise<Service[]>;
+    services?: ServiceMetadata[]; // Static services data for mocking
 }
 
 export interface Descriptor {
@@ -297,7 +296,6 @@ export class MockBleManager {
     }
 
     // Service discovery
-    private deviceServicesMetadata: Map<DeviceId, ServiceMetadata[]> = new Map();
     private discoveredServices: Map<DeviceId, Service[]> = new Map();
     private descriptorValues: Map<string, string> = new Map();
     private descriptorErrors: Map<string, Error> = new Map();
@@ -305,16 +303,6 @@ export class MockBleManager {
     // ======================
     // Service Discovery
     // ======================
-
-    /**
-     * Set services and characteristics metadata for a device
-     */
-    setDeviceServices(
-        deviceId: DeviceId,
-        services: ServiceMetadata[]
-    ) {
-        this.deviceServicesMetadata.set(deviceId, services);
-    }
 
     /**
      * Discover all services and characteristics for a device
@@ -332,27 +320,28 @@ export class MockBleManager {
             throw new Error('Device not found');
         }
 
-        // Get services metadata
-        const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
+        // Use static services from the device definition
+        const staticServices = device.services || [];
 
-        // Create service objects
-        const services: Service[] = servicesMetadata.map(service => ({
+        // Create service objects from static data and mark them as discovered
+        const services: Service[] = staticServices.map(service => ({
             uuid: service.uuid,
             deviceID: deviceIdentifier
         }));
 
-        // Store discovered services
+        // Store discovered services (simulating the discovery process)
         this.discoveredServices.set(deviceIdentifier, services);
 
         return device;
     }
 
     /**
-     * Get discovered services for a device
+     * Get services for a device (must call discoverAllServicesAndCharacteristicsForDevice first)
      */
     async servicesForDevice(
         deviceIdentifier: DeviceId
     ): Promise<Service[]> {
+        // Check if services were discovered for this device
         if (!this.discoveredServices.has(deviceIdentifier)) {
             throw new Error('Services not discovered for device');
         }
@@ -367,9 +356,12 @@ export class MockBleManager {
         serviceUUID: UUID,
         deviceIdentifier: DeviceId
     ): Promise<CharacteristicMetadata[]> {
-        const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
-        const service = servicesMetadata.find(s => s.uuid === serviceUUID);
+        const device = this.discoveredDevices.get(deviceIdentifier);
+        if (!device || !device.services) {
+            throw new Error(`Device ${deviceIdentifier} not found or has no services`);
+        }
 
+        const service = device.services.find(s => s.uuid === serviceUUID);
         if (!service) {
             throw new Error(`Service ${serviceUUID} not found`);
         }
@@ -635,32 +627,21 @@ export class MockBleManager {
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
         }
-        // Attach discovery method and ensure all required properties are present
+        
+        // Create the mock device - store services directly on the device
         const mockDevice: MockDevice = {
             id: device.id,
             name: device.name ?? null,
             rssi: device.rssi ?? null,
-            mtu: device.mtu,
+            mtu: device.mtu || 517, // Default MTU
             manufacturerData: device.manufacturerData ?? null,
             serviceData: device.serviceData ?? null,
-            serviceUUIDs: device.serviceUUIDs ?? null,
+            serviceUUIDs: device.services ? device.services.map(s => s.uuid) : (device.serviceUUIDs ?? null),
             isConnectable: device.isConnectable,
-            discoverAllServicesAndCharacteristics: () => {
-                return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
-            },
-            services: () => {
-                return this.servicesForDevice(device.id);
-            },
+            services: device.services, // Static services data for mocking
         };
+        
         this.discoveredDevices.set(device.id, mockDevice);
-        // Automatically create service metadata
-        if (device.serviceUUIDs) {
-            const servicesMetadata: ServiceMetadata[] = device.serviceUUIDs.map(uuid => ({
-                uuid,
-                characteristics: []
-            }));
-            this.setDeviceServices(device.id, servicesMetadata);
-        }
     }
 
     removeMockDevice(deviceId: string) {
@@ -786,9 +767,10 @@ export class MockBleManager {
             return this.simulateReadOperation(key, () => Promise.reject(error));
         }
 
-        // Get characteristic metadata to determine properties
-        const servicesMetadata = this.deviceServicesMetadata.get(deviceIdentifier) || [];
-        const service = servicesMetadata.find(s => s.uuid === serviceUUID);
+        // Get characteristic metadata to determine properties from static device services
+        const device = this.discoveredDevices.get(deviceIdentifier);
+        const staticServices = device?.services || [];
+        const service = staticServices.find(s => s.uuid === serviceUUID);
         const charMetadata = service?.characteristics.find(c => c.uuid === characteristicUUID);
 
         // Get the current value
@@ -1400,7 +1382,6 @@ export class MockBleManager {
         this.connectionListeners.clear();
         this.mtuListeners.clear();
         this.deviceMaxMTUs.clear();
-        this.deviceServicesMetadata.clear();
         this.discoveredServices.clear();
         
         // Clear all error and delay maps

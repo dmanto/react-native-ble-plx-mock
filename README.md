@@ -134,11 +134,8 @@ const manager2 = new MockBleManager({
 ### Jest Test Example
 
 ```typescript
-// For CommonJS projects (most common)
-const { MockBleManager } = require('react-native-ble-plx-mock/dist/index.cjs');
-
-// Or for ES modules projects
-// import { MockBleManager } from 'react-native-ble-plx-mock';
+// Modern ES modules approach (recommended)
+import { MockBleManager } from 'react-native-ble-plx-mock';
 
 describe('BLE Integration', () => {
   let bleManager: any; // Use 'any' type for simplicity in tests
@@ -169,10 +166,41 @@ describe('BLE Integration', () => {
     // Verify
     expect(foundDevices.some(d => d.name === 'Heart Rate Monitor')).toBe(true);
   });
+
+  it('should discover services and characteristics', async () => {
+    // Setup device with services
+    bleManager.addMockDevice({
+      id: 'hr-monitor',
+      name: 'Heart Rate Monitor',
+      serviceUUIDs: ['180D'],
+      services: [
+        {
+          uuid: '180D',
+          characteristics: [
+            {
+              uuid: '2A37',
+              isReadable: true,
+              isNotifiable: true,
+              properties: { read: true, notify: true }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Connect and discover
+    await bleManager.connectToDevice('hr-monitor');
+    await bleManager.discoverAllServicesAndCharacteristicsForDevice('hr-monitor');
+    
+    // Access services
+    const services = await bleManager.servicesForDevice('hr-monitor');
+    expect(services.length).toBe(1);
+    expect(services[0].uuid).toBe('180D');
+  });
 });
 ```
 
-**Note**: If you encounter module import issues with Jest, use the CommonJS import path `/dist/index.cjs` which works reliably across different project setups.
+**Note**: This library uses modern ES modules. Make sure your Jest configuration supports ES modules with `preset: 'ts-jest/presets/default-esm'` and `extensionsToTreatAsEsm: ['.ts']`.
 
 ## API Reference
 
@@ -215,6 +243,14 @@ The mock library implements all methods from the original [`BleManager`](https:/
 | **clearWriteWithResponseError** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string` | Clear specific write error |
 | **clearConnectionError** | `deviceId: string` | Clear connection error |
 
+### Service Discovery
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| **discoverAllServicesAndCharacteristicsForDevice** | `deviceId: string` | Discover all services and characteristics for a connected device |
+| **servicesForDevice** | `deviceId: string` | Get discovered services (requires prior discovery) |
+| **characteristicsForService** | `serviceUUID: string`, `deviceId: string` | Get characteristics for a service |
+
 ### Device Information
 
 | Method | Parameters | Description |
@@ -236,6 +272,29 @@ interface MockDevice {
   serviceData?: string | null; // base64
   serviceUUIDs?: string[];
   isConnectable?: boolean;
+  services?: ServiceMetadata[]; // Full service definitions for discovery
+}
+
+interface ServiceMetadata {
+  uuid: string;
+  characteristics: CharacteristicMetadata[];
+}
+
+interface CharacteristicMetadata {
+  uuid: string;
+  isReadable?: boolean;
+  isWritableWithResponse?: boolean;
+  isWritableWithoutResponse?: boolean;
+  isNotifiable?: boolean;
+  isIndicatable?: boolean;
+  properties?: {
+    read?: boolean;
+    write?: boolean;
+    writeWithoutResponse?: boolean;
+    notify?: boolean;
+    indicate?: boolean;
+  };
+  descriptors?: DescriptorMetadata[];
 }
 ```
 

@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.2-beta.0] - 2025-08-11
+
+### Added
+- **NEW**: `discoverAllServicesAndCharacteristicsForDevice()` method for proper BLE service discovery workflow
+- **NEW**: `servicesForDevice()` and `characteristicsForService()` methods now require explicit discovery
+- **NEW**: Jest test support with comprehensive ES modules configuration
+- **NEW**: Modern ES modules testing examples in README
+- **NEW**: Enhanced `MockDevice` interface with `services` property for full service definitions
+- **NEW**: Support for complex service metadata including descriptors and properties
+
+### Changed
+- **BREAKING**: Services and characteristics now require discovery before access (matches real BLE behavior)
+- **BREAKING**: Removed internal `deviceServicesMetadata` storage in favor of static device service data
+- **MODERNIZED**: Eliminated CommonJS dependencies in favor of pure ES modules approach
+- **IMPROVED**: Test file organization with separate Node.js (`*.node.test.ts`) and Jest (`*.jest.test.ts`) files
+- **ENHANCED**: README with modern Jest configuration and service discovery examples
+
+### Fixed
+- Service discovery flow now properly matches react-native-ble-plx behavior
+- Simplified mock architecture by removing redundant service metadata storage
+- TypeScript configuration updated to support both Node.js and Jest testing environments
+
 ### [0.2.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.0...v0.2.1) (2025-07-25)
 
 ## [0.2.0-beta.7] - 2025-06-29

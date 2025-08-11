@@ -91,45 +91,28 @@ describe('MockBleManager', () => {
         assert.ok(discoveredDevices.some(d => d.name === 'Smart Thermometer'));
     });
 
-    it('should connect and discover services', async () => {
+    it('should connect to device', async () => {
         // Connect to device
         const device = await bleManager.connectToDevice(heartMonitorId);
         assert.equal(device.name, 'Heart Monitor');
         assert.ok(bleManager.isDeviceConnected(heartMonitorId));
 
-        // Discover services
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        // Services require discovery first
+        await assert.rejects(
+            () => bleManager.servicesForDevice(heartMonitorId),
+            { message: 'Services not discovered for device' }
+        );
 
-        // Verify services
+        // After discovery, services should be available
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
         const services = await bleManager.servicesForDevice(heartMonitorId);
-        assert.deepEqual(services.map(s => s.uuid), [serviceUUID, '180F']);
-        const servicesAgain = await device.services();
-        assert.deepEqual(servicesAgain.map(s => s.uuid), [serviceUUID, '180F']);
+        assert.equal(services.length, 0); // serviceUUIDs alone don't create discoverable services
     });
 
-    it('should support discoverAllServicesAndCharacteristics on device instances', async () => {
-    // Get a device instance (could also be from scanning)
-    const device = await bleManager.connectToDevice(heartMonitorId);
-    assert.equal(device.name, 'Heart Monitor');
-    
-    // Verify the method exists
-    assert.ok(device.discoverAllServicesAndCharacteristics, 'Method should be attached to device');
-    
-    // Call the method directly on the device
-    const result = await device.discoverAllServicesAndCharacteristics!();
-    
-    // Verify it returns the device
-    assert.strictEqual(result, device);
-    
-    // Verify services were discovered
-    const services = await bleManager.servicesForDevice(heartMonitorId);
-    assert.deepEqual(services.map(s => s.uuid), [serviceUUID, '180F']);
-});
 
     it('should monitor characteristic changes', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
 
         bleManager.setCharacteristicValueForReading(
             heartMonitorId,
@@ -172,7 +155,7 @@ describe('MockBleManager', () => {
     it('should read characteristic values', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         bleManager.setCharacteristicValueForReading(
             heartMonitorId,
@@ -207,7 +190,7 @@ describe('MockBleManager', () => {
     it('should write characteristic values', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         let writtenValue = '';
         const writeListener = bleManager.onCharacteristicWrite(
@@ -412,7 +395,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic read errors', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Simulate read error
         const testError = new Error('Read failed');
@@ -458,7 +441,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic write errors', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Simulate write error
         const testError = new Error('Write failed');
@@ -535,7 +518,7 @@ describe('MockBleManager', () => {
     it('should handle Buffer convenience methods', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Test setCharacteristicValueFromBuffer
         const bufferValue = Buffer.from([0x01, 0x02, 0x03, 0x04]);
@@ -574,7 +557,7 @@ describe('MockBleManager', () => {
     it('should handle write without response operations', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         let writtenValue = '';
         const writeListener = bleManager.onCharacteristicWrite(
@@ -634,7 +617,7 @@ describe('MockBleManager', () => {
     it('should handle write operation delays', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         const testValue = Buffer.from([0x01, 0x02]).toString('base64');
 
@@ -679,7 +662,7 @@ describe('MockBleManager', () => {
         // Setup with connections and monitoring
         await bleManager.connectToDevice(heartMonitorId);
         await bleManager.connectToDevice(thermoId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Set up monitoring
         bleManager.setCharacteristicValueForReading(
@@ -771,7 +754,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic error simulation during monitoring', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         let receivedError: Error | null = null;
         const monitoringSub = bleManager.monitorCharacteristicForDevice(
@@ -804,7 +787,7 @@ describe('MockBleManager', () => {
     it('should handle edge cases in notifications', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Test notifications without listeners (should not crash)
         bleManager.setCharacteristicValueForReading(
@@ -919,12 +902,24 @@ describe('MockBleManager', () => {
             }
         ];
 
-        // Set the services metadata
-        bleManager.setDeviceServices(heartMonitorId, servicesMetadata);
+        // Clear existing device and add with services metadata
+        bleManager.clearMockDevices();
+        bleManager.addMockDevice({
+            id: heartMonitorId,
+            name: 'Heart Monitor',
+            rssi: -55,
+            mtu: 128,
+            manufacturerData: Buffer.from([0x48, 0x52]).toString('base64'),
+            serviceData: null,
+            serviceUUIDs: [serviceUUID, '180F'],
+            isConnectable: true,
+            services: servicesMetadata
+        });
 
         // Connect and discover
         await bleManager.connectToDevice(heartMonitorId);
         await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
+        
 
         // Set initial characteristic values
         bleManager.setCharacteristicValueForReading(
@@ -1064,5 +1059,94 @@ describe('MockBleManager', () => {
             '2902'
         );
         assert.ok(finalDescriptor);
+    });
+
+    it('should discover services and characteristics properly', async () => {
+        // Define complex service structure
+        const servicesMetadata = [
+            {
+                uuid: serviceUUID, // '180D' Heart Rate Service
+                characteristics: [
+                    {
+                        uuid: charUUID, // '2A37' Heart Rate Measurement
+                        isReadable: true,
+                        isNotifiable: true,
+                        properties: {
+                            read: true,
+                            notify: true
+                        },
+                        descriptors: [
+                            {
+                                uuid: '2902', // CCCD
+                                value: Buffer.from([0x00, 0x00]).toString('base64'),
+                                isReadable: true,
+                                isWritable: true
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                uuid: '180F', // Battery Service
+                characteristics: [
+                    {
+                        uuid: '2A19', // Battery Level
+                        isReadable: true,
+                        isNotifiable: true,
+                        properties: {
+                            read: true,
+                            notify: true
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Set device with services
+        bleManager.addMockDevice({
+            id: 'discovery-test-device',
+            name: 'Discovery Test',
+            isConnectable: true,
+            services: servicesMetadata
+        });
+
+        // Connect to device
+        await bleManager.connectToDevice('discovery-test-device');
+
+        // Services should not be available before discovery
+        await assert.rejects(
+            () => bleManager.servicesForDevice('discovery-test-device'),
+            { message: 'Services not discovered for device' }
+        );
+
+        // Perform discovery
+        const discoveredDevice = await bleManager.discoverAllServicesAndCharacteristicsForDevice('discovery-test-device');
+        assert.strictEqual(discoveredDevice.name, 'Discovery Test');
+
+        // Now services should be available
+        const services = await bleManager.servicesForDevice('discovery-test-device');
+        assert.strictEqual(services.length, 2);
+        
+        const heartRateService = services.find(s => s.uuid === serviceUUID);
+        assert.ok(heartRateService);
+        assert.strictEqual(heartRateService.deviceID, 'discovery-test-device');
+        
+        const batteryService = services.find(s => s.uuid === '180F');
+        assert.ok(batteryService);
+        assert.strictEqual(batteryService.deviceID, 'discovery-test-device');
+
+        // Test characteristics for each service
+        const heartRateChars = await bleManager.characteristicsForService(serviceUUID, 'discovery-test-device');
+        assert.strictEqual(heartRateChars.length, 1);
+        assert.strictEqual(heartRateChars[0].uuid, charUUID);
+        assert.strictEqual(heartRateChars[0].isReadable, true);
+        assert.strictEqual(heartRateChars[0].isNotifiable, true);
+        assert.strictEqual(heartRateChars[0].descriptors?.length, 1);
+
+        const batteryChars = await bleManager.characteristicsForService('180F', 'discovery-test-device');
+        assert.strictEqual(batteryChars.length, 1);
+        assert.strictEqual(batteryChars[0].uuid, '2A19');
+        assert.strictEqual(batteryChars[0].isReadable, true);
+        assert.strictEqual(batteryChars[0].isNotifiable, true);
     });
 });

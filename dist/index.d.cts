@@ -18,8 +18,7 @@ interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
-    discoverAllServicesAndCharacteristics: () => Promise<MockDevice>;
-    services: () => Promise<Service[]>;
+    services?: ServiceMetadata[];
 }
 interface Descriptor {
     uuid: UUID;
@@ -159,20 +158,15 @@ declare class MockBleManager {
      * Notify MTU listeners
      */
     private notifyMTUChange;
-    private deviceServicesMetadata;
     private discoveredServices;
     private descriptorValues;
     private descriptorErrors;
-    /**
-     * Set services and characteristics metadata for a device
-     */
-    setDeviceServices(deviceId: DeviceId, services: ServiceMetadata[]): void;
     /**
      * Discover all services and characteristics for a device
      */
     discoverAllServicesAndCharacteristicsForDevice(deviceIdentifier: DeviceId): Promise<MockDevice>;
     /**
-     * Get discovered services for a device
+     * Get services for a device (must call discoverAllServicesAndCharacteristicsForDevice first)
      */
     servicesForDevice(deviceIdentifier: DeviceId): Promise<Service[]>;
     /**
