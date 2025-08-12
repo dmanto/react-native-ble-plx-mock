@@ -18,7 +18,7 @@ interface MockDevice {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
-    services?: ServiceMetadata[];
+    services?: () => Promise<Service[]>;
 }
 interface Descriptor {
     uuid: UUID;
@@ -159,6 +159,7 @@ declare class MockBleManager {
      */
     private notifyMTUChange;
     private discoveredServices;
+    private serviceMetadata;
     private descriptorValues;
     private descriptorErrors;
     /**
@@ -222,6 +223,7 @@ declare class MockBleManager {
     private notifyConnectionListeners;
     addMockDevice(device: Partial<MockDevice> & {
         id: string;
+        services?: ServiceMetadata[];
     }): void;
     removeMockDevice(deviceId: string): void;
     clearMockDevices(): void;
