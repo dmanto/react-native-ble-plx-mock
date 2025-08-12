@@ -409,7 +409,10 @@ var MockBleManager = class {
           deviceID: device.id,
           isPrimary: true
         }));
-      } : void 0
+      } : void 0,
+      discoverAllServicesAndCharacteristics: async () => {
+        return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      }
     };
     this.discoveredDevices.set(device.id, mockDevice);
   }

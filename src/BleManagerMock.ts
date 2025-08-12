@@ -29,6 +29,7 @@ export interface MockDevice {
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean; // Added for connection simulation
     services?: () => Promise<Service[]>; // Async function for service discovery
+    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>; // Device method for service discovery
 }
 
 export interface Descriptor {
@@ -631,7 +632,7 @@ export class MockBleManager {
             this.serviceMetadata.set(device.id, device.services);
         }
         
-        // Create the mock device with async services function
+        // Create the mock device with async services function and discoverAllServicesAndCharacteristics method
         const mockDevice: MockDevice = {
             id: device.id,
             name: device.name ?? null,
@@ -649,6 +650,10 @@ export class MockBleManager {
                     isPrimary: true
                 }));
             } : undefined,
+            discoverAllServicesAndCharacteristics: async () => {
+                // Call the manager's discovery method for this device
+                return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+            }
         };
         
         this.discoveredDevices.set(device.id, mockDevice);

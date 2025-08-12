@@ -82,8 +82,10 @@ setTimeout(() => {
 // Connect to device
 const device = await bleManager.connectToDevice('device-1');
 
-// Discover services
-await bleManager.discoverAllServicesAndCharacteristicsForDevice('device-1');
+// Discover services (both approaches work)
+const discoveredDevice = await device.discoverAllServicesAndCharacteristics(); // Device method
+// OR
+await bleManager.discoverAllServicesAndCharacteristicsForDevice('device-1'); // Manager method
 
 // Read characteristic
 const char = await bleManager.readCharacteristicForDevice(
@@ -188,9 +190,9 @@ describe('BLE Integration', () => {
       ]
     });
 
-    // Connect and discover
-    await bleManager.connectToDevice('hr-monitor');
-    await bleManager.discoverAllServicesAndCharacteristicsForDevice('hr-monitor');
+    // Connect and discover (using device method - matches real API)
+    const device = await bleManager.connectToDevice('hr-monitor');
+    await device.discoverAllServicesAndCharacteristics();
     
     // Access services
     const services = await bleManager.servicesForDevice('hr-monitor');
@@ -273,6 +275,7 @@ interface MockDevice {
   serviceUUIDs?: string[];
   isConnectable?: boolean;
   services?: () => Promise<Service[]>; // Async function for service discovery (matches real API)
+  discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>; // Device method for service discovery (matches real API)
 }
 
 // When adding devices, provide services as ServiceMetadata[] - will be converted to async function

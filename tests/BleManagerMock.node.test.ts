@@ -1149,4 +1149,70 @@ describe('MockBleManager', () => {
         assert.strictEqual(batteryChars[0].isReadable, true);
         assert.strictEqual(batteryChars[0].isNotifiable, true);
     });
+
+    it('should support discoverAllServicesAndCharacteristics method on device objects', async () => {
+        // Define service structure
+        const servicesMetadata = [
+            {
+                uuid: serviceUUID, // '180D' Heart Rate Service
+                characteristics: [
+                    {
+                        uuid: charUUID, // '2A37' Heart Rate Measurement
+                        isReadable: true,
+                        isNotifiable: true,
+                        properties: { read: true, notify: true }
+                    }
+                ]
+            }
+        ];
+
+        // Add mock device with services
+        bleManager.addMockDevice({
+            id: 'device-method-test',
+            name: 'Device Method Test',
+            services: servicesMetadata,
+            isConnectable: true
+        });
+
+        // Start scanning to get device reference
+        let deviceFromScan: MockDevice | null = null;
+        bleManager.startDeviceScan(null, null, (error, device) => {
+            if (error) return;
+            if (device && device.id === 'device-method-test') {
+                deviceFromScan = device;
+            }
+        });
+
+        // Wait for device to be found
+        await new Promise(resolve => setTimeout(resolve, 10));
+        bleManager.stopDeviceScan();
+        
+        assert.ok(deviceFromScan, 'Device should be found during scan');
+        
+        // Verify discoverAllServicesAndCharacteristics method exists on device
+        assert.ok(
+            typeof deviceFromScan.discoverAllServicesAndCharacteristics === 'function',
+            'Device should have discoverAllServicesAndCharacteristics method'
+        );
+
+        // Connect to device
+        const connectedDevice = await bleManager.connectToDevice(deviceFromScan.id);
+        
+        // Services should not be available before discovery
+        await assert.rejects(
+            () => bleManager.servicesForDevice(connectedDevice.id),
+            { message: 'Services not discovered for device' }
+        );
+
+        // Call discovery method via the device object
+        const discoveredDevice = await connectedDevice.discoverAllServicesAndCharacteristics!();
+        assert.strictEqual(discoveredDevice.name, 'Device Method Test');
+        assert.strictEqual(discoveredDevice.id, 'device-method-test');
+
+        // Now services should be available
+        const services = await bleManager.servicesForDevice(discoveredDevice.id);
+        assert.strictEqual(services.length, 1);
+        assert.strictEqual(services[0].uuid, serviceUUID);
+        assert.strictEqual(services[0].deviceID, 'device-method-test');
+    });
 });

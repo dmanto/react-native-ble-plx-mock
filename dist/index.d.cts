@@ -19,6 +19,7 @@ interface MockDevice {
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
     services?: () => Promise<Service[]>;
+    discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
 }
 interface Descriptor {
     uuid: UUID;

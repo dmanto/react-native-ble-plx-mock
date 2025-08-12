@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2-beta.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.0...v0.2.2-beta.1) (2025-08-12)
+
+## [0.2.2-beta.1] - 2025-08-12
+
+### Added
+- **NEW**: `discoverAllServicesAndCharacteristics()` method now available directly on MockDevice objects
+- **ENHANCEMENT**: Device objects returned from scanning and connection now match real react-native-ble-plx API more closely
+- **NEW**: Comprehensive test coverage for device-level service discovery method
+
+### Changed
+- **IMPROVED**: MockDevice objects now include the `discoverAllServicesAndCharacteristics()` method for better API compatibility
+- **ENHANCED**: Service discovery can now be called via `device.discoverAllServicesAndCharacteristics()` in addition to the manager method
+
+### Fixed
+- **API CONSISTENCY**: Device objects now provide the same methods as the real react-native-ble-plx library
+- **DEVELOPER EXPERIENCE**: Tests can now more closely mirror production code patterns
+
 ### [0.2.2-beta.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.1...v0.2.2-beta.0) (2025-08-12)
 
 ## [0.2.2-beta.0] - 2025-08-12
