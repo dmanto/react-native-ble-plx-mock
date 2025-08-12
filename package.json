@@ -1,6 +1,6 @@
 {
   "name": "react-native-ble-plx-mock",
-  "version": "0.2.2-beta.0",
+  "version": "0.2.2-beta.1",
   "description": "🔌 Mock implementation of react-native-ble-plx for testing. Simulate BLE devices, control responses, and accelerate development without physical hardware.",
   "type": "module",
   "main": "dist/index.js",

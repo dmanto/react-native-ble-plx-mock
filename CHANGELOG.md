@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [0.2.2-beta.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.0...v0.2.2-beta.1) (2025-08-12)
 
+
+### Features
+
+* add discoverAllServicesAndCharacteristics method to MockDevice objects ([b26dc39](https://github.com/dmanto/react-native-ble-plx-mock/commit/b26dc3968926c08fe7dc709c1fe2ebb91e8935cb))
+
+### [0.2.2-beta.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.0...v0.2.2-beta.1) (2025-08-12)
+
 ## [0.2.2-beta.1] - 2025-08-12
 
 ### Added
