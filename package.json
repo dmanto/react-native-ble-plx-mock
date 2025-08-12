@@ -1,6 +1,6 @@
 {
   "name": "react-native-ble-plx-mock",
-  "version": "0.2.2-beta.1",
+  "version": "0.2.2-beta.2",
   "description": "🔌 Mock implementation of react-native-ble-plx for testing. Simulate BLE devices, control responses, and accelerate development without physical hardware.",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,8 @@
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "coverage": "c8 --reporter=text-lcov > coverage.lcov",
     "type-check": "tsc --noEmit",
-    "test": "c8 --reporter=lcov --reporter=text tsx --test tests/*.node.test.ts",
+    "test": "npm run test:node && npm run test:jest",
+    "test:node": "c8 --reporter=lcov --reporter=text tsx --test tests/*.node.test.ts",
     "test:jest": "jest",
     "prepack": "npm run build && npm test",
     "release": "standard-version",
