@@ -82,17 +82,32 @@ setTimeout(() => {
 // Connect to device
 const device = await bleManager.connectToDevice('device-1');
 
+// Check connection status using device method
+const isConnected = await device.isConnected();
+console.log('Connected:', isConnected); // true
+
 // Discover services (both approaches work)
 const discoveredDevice = await device.discoverAllServicesAndCharacteristics(); // Device method
 // OR
 await bleManager.discoverAllServicesAndCharacteristicsForDevice('device-1'); // Manager method
 
-// Read characteristic
-const char = await bleManager.readCharacteristicForDevice(
-  'device-1',
-  '180D',
-  '2A37'
-);
+// Read characteristic using device method
+const char = await device.readCharacteristicForService('180D', '2A37');
+// OR using manager method
+const char2 = await bleManager.readCharacteristicForDevice('device-1', '180D', '2A37');
+
+// Write characteristic using device method
+const writeValue = Buffer.from('Hello').toString('base64');
+const writtenChar = await device.writeCharacteristicWithResponseForService('180D', '2A37', writeValue);
+
+// Monitor characteristic using device method
+const subscription = device.monitorCharacteristicForService('180D', '2A37', (error, characteristic) => {
+  if (error) console.error('Monitor error:', error);
+  if (characteristic) console.log('New value:', characteristic.value);
+});
+
+// Disconnect using device method
+const disconnectedDevice = await device.cancelConnection();
 ```
 
 ## Error Simulation
@@ -253,6 +268,20 @@ The mock library implements all methods from the original [`BleManager`](https:/
 | **servicesForDevice** | `deviceId: string` | Get discovered services (requires prior discovery) |
 | **characteristicsForService** | `serviceUUID: string`, `deviceId: string` | Get characteristics for a service |
 
+### Device-Level Methods
+
+Mock devices support all the standard device-level methods that match the real react-native-ble-plx API:
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| **device.discoverAllServicesAndCharacteristics()** | - | Discover services and characteristics (returns the device) |
+| **device.isConnected()** | - | Check if device is connected (returns Promise\<boolean\>) |
+| **device.cancelConnection()** | - | Disconnect from device (returns the device) |
+| **device.readCharacteristicForService()** | `serviceUUID: string`, `characteristicUUID: string`, `transactionId?: string` | Read characteristic value |
+| **device.writeCharacteristicWithResponseForService()** | `serviceUUID: string`, `characteristicUUID: string`, `base64Value: string`, `transactionId?: string` | Write with response |
+| **device.writeCharacteristicWithoutResponseForService()** | `serviceUUID: string`, `characteristicUUID: string`, `base64Value: string`, `transactionId?: string` | Write without response |
+| **device.monitorCharacteristicForService()** | `serviceUUID: string`, `characteristicUUID: string`, `listener: function`, `transactionId?: string` | Monitor characteristic changes |
+
 ### Device Information
 
 | Method | Parameters | Description |
@@ -275,7 +304,15 @@ interface MockDevice {
   serviceUUIDs?: string[];
   isConnectable?: boolean;
   services?: () => Promise<Service[]>; // Async function for service discovery (matches real API)
-  discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>; // Device method for service discovery (matches real API)
+  
+  // Device-level methods (match real react-native-ble-plx API)
+  discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
+  isConnected?: () => Promise<boolean>;
+  cancelConnection?: () => Promise<MockDevice>;
+  readCharacteristicForService?: (serviceUUID: string, characteristicUUID: string, transactionId?: string) => Promise<Characteristic>;
+  writeCharacteristicWithResponseForService?: (serviceUUID: string, characteristicUUID: string, base64Value: string, transactionId?: string) => Promise<Characteristic>;
+  writeCharacteristicWithoutResponseForService?: (serviceUUID: string, characteristicUUID: string, base64Value: string, transactionId?: string) => Promise<Characteristic>;
+  monitorCharacteristicForService?: (serviceUUID: string, characteristicUUID: string, listener: function, transactionId?: string) => MonitorSubscription;
 }
 
 // When adding devices, provide services as ServiceMetadata[] - will be converted to async function

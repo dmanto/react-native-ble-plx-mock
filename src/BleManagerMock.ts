@@ -30,6 +30,12 @@ export interface MockDevice {
     isConnectable?: boolean; // Added for connection simulation
     services?: () => Promise<Service[]>; // Async function for service discovery
     discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>; // Device method for service discovery
+    writeCharacteristicWithResponseForService?: (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => Promise<Characteristic>;
+    writeCharacteristicWithoutResponseForService?: (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => Promise<Characteristic>;
+    readCharacteristicForService?: (serviceUUID: UUID, characteristicUUID: UUID, transactionId?: TransactionId) => Promise<Characteristic>;
+    monitorCharacteristicForService?: (serviceUUID: UUID, characteristicUUID: UUID, listener: CharacteristicListener, transactionId?: TransactionId) => MonitorSubscription;
+    isConnected?: () => Promise<boolean>;
+    cancelConnection?: () => Promise<MockDevice>;
 }
 
 export interface Descriptor {
@@ -632,7 +638,7 @@ export class MockBleManager {
             this.serviceMetadata.set(device.id, device.services);
         }
         
-        // Create the mock device with async services function and discoverAllServicesAndCharacteristics method
+        // Create the mock device with async services function and all device-level methods
         const mockDevice: MockDevice = {
             id: device.id,
             name: device.name ?? null,
@@ -653,6 +659,30 @@ export class MockBleManager {
             discoverAllServicesAndCharacteristics: async () => {
                 // Call the manager's discovery method for this device
                 return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+            },
+            writeCharacteristicWithResponseForService: async (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => {
+                // Delegate to manager's method
+                return this.writeCharacteristicWithResponseForDevice(device.id, serviceUUID, characteristicUUID, base64Value, transactionId);
+            },
+            writeCharacteristicWithoutResponseForService: async (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => {
+                // Delegate to manager's method
+                return this.writeCharacteristicWithoutResponseForDevice(device.id, serviceUUID, characteristicUUID, base64Value, transactionId);
+            },
+            readCharacteristicForService: async (serviceUUID: UUID, characteristicUUID: UUID, transactionId?: TransactionId) => {
+                // Delegate to manager's method
+                return this.readCharacteristicForDevice(device.id, serviceUUID, characteristicUUID, transactionId);
+            },
+            monitorCharacteristicForService: (serviceUUID: UUID, characteristicUUID: UUID, listener: CharacteristicListener, transactionId?: TransactionId) => {
+                // Delegate to manager's method
+                return this.monitorCharacteristicForDevice(device.id, serviceUUID, characteristicUUID, listener, transactionId);
+            },
+            isConnected: async () => {
+                // Check if device is connected
+                return this.isDeviceConnected(device.id);
+            },
+            cancelConnection: async () => {
+                // Delegate to manager's method
+                return this.cancelDeviceConnection(device.id);
             }
         };
         

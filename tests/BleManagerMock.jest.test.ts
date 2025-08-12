@@ -452,4 +452,149 @@ describe('BLE Integration (Jest)', () => {
       charUUID
     )).resolves.toBeDefined();
   });
+
+  it('should support all device-level methods', async () => {
+    // Define service structure with comprehensive characteristics
+    const servicesMetadata = [
+      {
+        uuid: serviceUUID, // '180D' Heart Rate Service
+        characteristics: [
+          {
+            uuid: charUUID, // '2A37' Heart Rate Measurement
+            isReadable: true,
+            isWritableWithResponse: true,
+            isWritableWithoutResponse: true,
+            isNotifiable: true,
+            isIndicatable: false,
+            properties: {
+              read: true,
+              write: true,
+              writeWithoutResponse: true,
+              notify: true
+            }
+          }
+        ]
+      }
+    ];
+
+    // Add mock device with all capabilities
+    bleManager.addMockDevice({
+      id: 'full-methods-test-jest',
+      name: 'Full Methods Test Device (Jest)',
+      services: servicesMetadata,
+      isConnectable: true
+    });
+
+    // Start scanning to get device reference
+    let deviceFromScan: any = null;
+    bleManager.startDeviceScan(null, null, (error: any, device: any) => {
+      if (error) return;
+      if (device && device.id === 'full-methods-test-jest') {
+        deviceFromScan = device;
+      }
+    });
+
+    // Wait for device to be found
+    await new Promise(resolve => setTimeout(resolve, 50));
+    bleManager.stopDeviceScan();
+    
+    expect(deviceFromScan).toBeDefined();
+    
+    // Verify all device methods exist
+    expect(typeof deviceFromScan.discoverAllServicesAndCharacteristics).toBe('function');
+    expect(typeof deviceFromScan.isConnected).toBe('function');
+    expect(typeof deviceFromScan.cancelConnection).toBe('function');
+    expect(typeof deviceFromScan.readCharacteristicForService).toBe('function');
+    expect(typeof deviceFromScan.writeCharacteristicWithResponseForService).toBe('function');
+    expect(typeof deviceFromScan.writeCharacteristicWithoutResponseForService).toBe('function');
+    expect(typeof deviceFromScan.monitorCharacteristicForService).toBe('function');
+
+    // Test isConnected method (should be false before connection)
+    let isConnectedBefore = await deviceFromScan.isConnected();
+    expect(isConnectedBefore).toBe(false);
+
+    // Connect to device
+    const connectedDevice = await bleManager.connectToDevice(deviceFromScan.id);
+    
+    // Test isConnected method (should be true after connection)
+    const isConnectedAfter = await connectedDevice.isConnected();
+    expect(isConnectedAfter).toBe(true);
+    
+    // Discover services and characteristics using device method
+    await connectedDevice.discoverAllServicesAndCharacteristics();
+    
+    // Set up test data for characteristic operations
+    const testReadValue = Buffer.from('initial read value').toString('base64');
+    bleManager.setCharacteristicValueForReading('full-methods-test-jest', serviceUUID, charUUID, testReadValue);
+    
+    // Test readCharacteristicForService method
+    const readChar = await connectedDevice.readCharacteristicForService(serviceUUID, charUUID);
+    expect(readChar.value).toBe(testReadValue);
+    expect(readChar.uuid).toBe(charUUID);
+    expect(readChar.serviceUUID).toBe(serviceUUID);
+    expect(readChar.deviceID).toBe('full-methods-test-jest');
+    
+    // Test writeCharacteristicWithResponseForService method
+    const writeValue1 = Buffer.from('write with response test').toString('base64');
+    const writtenChar1 = await connectedDevice.writeCharacteristicWithResponseForService(serviceUUID, charUUID, writeValue1);
+    expect(writtenChar1.value).toBe(writeValue1);
+    expect(writtenChar1.uuid).toBe(charUUID);
+    expect(writtenChar1.serviceUUID).toBe(serviceUUID);
+    
+    // Test writeCharacteristicWithoutResponseForService method
+    const writeValue2 = Buffer.from('write without response test').toString('base64');
+    const writtenChar2 = await connectedDevice.writeCharacteristicWithoutResponseForService(serviceUUID, charUUID, writeValue2);
+    expect(writtenChar2.value).toBe(writeValue2);
+    expect(writtenChar2.uuid).toBe(charUUID);
+    expect(writtenChar2.serviceUUID).toBe(serviceUUID);
+    
+    // Test monitorCharacteristicForService method
+    let monitoringNotificationReceived = false;
+    let receivedCharacteristic: any = null;
+    
+    const subscription = connectedDevice.monitorCharacteristicForService(serviceUUID, charUUID, (error: any, characteristic: any) => {
+      if (error) {
+        throw new Error(`Monitoring error: ${error.message}`);
+      }
+      if (characteristic) {
+        monitoringNotificationReceived = true;
+        receivedCharacteristic = characteristic;
+      }
+    });
+    
+    // Wait for initial notification (should receive the current value)
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    expect(monitoringNotificationReceived).toBe(true);
+    expect(receivedCharacteristic).toBeDefined();
+    expect(receivedCharacteristic.uuid).toBe(charUUID);
+    expect(receivedCharacteristic.serviceUUID).toBe(serviceUUID);
+    expect(receivedCharacteristic.deviceID).toBe('full-methods-test-jest');
+    
+    // Test that monitoring receives new values
+    monitoringNotificationReceived = false;
+    const newMonitorValue = Buffer.from('new monitoring value').toString('base64');
+    bleManager.setCharacteristicValue('full-methods-test-jest', serviceUUID, charUUID, newMonitorValue, { notify: true });
+    
+    // Wait for notification
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    expect(monitoringNotificationReceived).toBe(true);
+    expect(receivedCharacteristic.value).toBe(newMonitorValue);
+    
+    // Clean up monitoring subscription
+    subscription.remove();
+    
+    // Test cancelConnection method
+    const disconnectedDevice = await connectedDevice.cancelConnection();
+    expect(disconnectedDevice.id).toBe('full-methods-test-jest');
+    
+    // Verify device is no longer connected using device method
+    const isConnectedFinal = await disconnectedDevice.isConnected();
+    expect(isConnectedFinal).toBe(false);
+    
+    // Verify device is no longer connected using manager method
+    const isConnectedViaManager = bleManager.isDeviceConnected('full-methods-test-jest');
+    expect(isConnectedViaManager).toBe(false);
+  });
 });

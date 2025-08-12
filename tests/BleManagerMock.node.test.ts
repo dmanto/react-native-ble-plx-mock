@@ -1215,4 +1215,157 @@ describe('MockBleManager', () => {
         assert.strictEqual(services[0].uuid, serviceUUID);
         assert.strictEqual(services[0].deviceID, 'device-method-test');
     });
+
+    it('should support all device-level methods', async () => {
+        // Define service structure with comprehensive characteristics
+        const servicesMetadata = [
+            {
+                uuid: serviceUUID, // '180D' Heart Rate Service
+                characteristics: [
+                    {
+                        uuid: charUUID, // '2A37' Heart Rate Measurement
+                        isReadable: true,
+                        isWritableWithResponse: true,
+                        isWritableWithoutResponse: true,
+                        isNotifiable: true,
+                        isIndicatable: false,
+                        properties: {
+                            read: true,
+                            write: true,
+                            writeWithoutResponse: true,
+                            notify: true
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Add mock device with all capabilities
+        bleManager.addMockDevice({
+            id: 'full-methods-test',
+            name: 'Full Methods Test Device',
+            services: servicesMetadata,
+            isConnectable: true
+        });
+
+        // Start scanning to get device reference
+        let deviceFromScan: MockDevice | null = null;
+        bleManager.startDeviceScan(null, null, (error, device) => {
+            if (error) return;
+            if (device && device.id === 'full-methods-test') {
+                deviceFromScan = device;
+            }
+        });
+
+        // Wait for device to be found
+        await new Promise(resolve => setTimeout(resolve, 10));
+        bleManager.stopDeviceScan();
+        
+        assert.ok(deviceFromScan, 'Device should be found during scan');
+        
+        // Verify all device methods exist
+        assert.ok(typeof deviceFromScan.discoverAllServicesAndCharacteristics === 'function',
+            'Device should have discoverAllServicesAndCharacteristics method');
+        assert.ok(typeof deviceFromScan.isConnected === 'function',
+            'Device should have isConnected method');
+        assert.ok(typeof deviceFromScan.cancelConnection === 'function',
+            'Device should have cancelConnection method');
+        assert.ok(typeof deviceFromScan.readCharacteristicForService === 'function',
+            'Device should have readCharacteristicForService method');
+        assert.ok(typeof deviceFromScan.writeCharacteristicWithResponseForService === 'function',
+            'Device should have writeCharacteristicWithResponseForService method');
+        assert.ok(typeof deviceFromScan.writeCharacteristicWithoutResponseForService === 'function',
+            'Device should have writeCharacteristicWithoutResponseForService method');
+        assert.ok(typeof deviceFromScan.monitorCharacteristicForService === 'function',
+            'Device should have monitorCharacteristicForService method');
+
+        // Test isConnected method (should be false before connection)
+        let isConnectedBefore = await deviceFromScan.isConnected!();
+        assert.strictEqual(isConnectedBefore, false, 'Device should not be connected initially');
+
+        // Connect to device
+        const connectedDevice = await bleManager.connectToDevice(deviceFromScan.id);
+        
+        // Test isConnected method (should be true after connection)
+        const isConnectedAfter = await connectedDevice.isConnected!();
+        assert.strictEqual(isConnectedAfter, true, 'Device should be connected after connect');
+        
+        // Discover services and characteristics using device method
+        await connectedDevice.discoverAllServicesAndCharacteristics!();
+        
+        // Set up test data for characteristic operations
+        const testReadValue = Buffer.from('initial read value').toString('base64');
+        bleManager.setCharacteristicValueForReading('full-methods-test', serviceUUID, charUUID, testReadValue);
+        
+        // Test readCharacteristicForService method
+        const readChar = await connectedDevice.readCharacteristicForService!(serviceUUID, charUUID);
+        assert.strictEqual(readChar.value, testReadValue, 'Should read correct characteristic value');
+        assert.strictEqual(readChar.uuid, charUUID);
+        assert.strictEqual(readChar.serviceUUID, serviceUUID);
+        assert.strictEqual(readChar.deviceID, 'full-methods-test');
+        
+        // Test writeCharacteristicWithResponseForService method
+        const writeValue1 = Buffer.from('write with response test').toString('base64');
+        const writtenChar1 = await connectedDevice.writeCharacteristicWithResponseForService!(serviceUUID, charUUID, writeValue1);
+        assert.strictEqual(writtenChar1.value, writeValue1, 'Should write correct value with response');
+        assert.strictEqual(writtenChar1.uuid, charUUID);
+        assert.strictEqual(writtenChar1.serviceUUID, serviceUUID);
+        
+        // Test writeCharacteristicWithoutResponseForService method
+        const writeValue2 = Buffer.from('write without response test').toString('base64');
+        const writtenChar2 = await connectedDevice.writeCharacteristicWithoutResponseForService!(serviceUUID, charUUID, writeValue2);
+        assert.strictEqual(writtenChar2.value, writeValue2, 'Should write correct value without response');
+        assert.strictEqual(writtenChar2.uuid, charUUID);
+        assert.strictEqual(writtenChar2.serviceUUID, serviceUUID);
+        
+        // Test monitorCharacteristicForService method
+        let monitoringNotificationReceived = false;
+        let receivedCharacteristic: any = null;
+        
+        const subscription = connectedDevice.monitorCharacteristicForService!(serviceUUID, charUUID, (error, characteristic) => {
+            if (error) {
+                assert.fail(`Monitoring error: ${error.message}`);
+                return;
+            }
+            if (characteristic) {
+                monitoringNotificationReceived = true;
+                receivedCharacteristic = characteristic;
+            }
+        });
+        
+        // Wait for initial notification (should receive the current value)
+        await new Promise(resolve => setTimeout(resolve, 20));
+        
+        assert(monitoringNotificationReceived, 'Should receive monitoring notification');
+        assert.ok(receivedCharacteristic, 'Should receive characteristic data');
+        assert.strictEqual(receivedCharacteristic.uuid, charUUID);
+        assert.strictEqual(receivedCharacteristic.serviceUUID, serviceUUID);
+        assert.strictEqual(receivedCharacteristic.deviceID, 'full-methods-test');
+        
+        // Test that monitoring receives new values
+        monitoringNotificationReceived = false;
+        const newMonitorValue = Buffer.from('new monitoring value').toString('base64');
+        bleManager.setCharacteristicValue('full-methods-test', serviceUUID, charUUID, newMonitorValue, { notify: true });
+        
+        // Wait for notification
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        assert(monitoringNotificationReceived, 'Should receive new value notification');
+        assert.strictEqual(receivedCharacteristic.value, newMonitorValue);
+        
+        // Clean up monitoring subscription
+        subscription.remove();
+        
+        // Test cancelConnection method
+        const disconnectedDevice = await connectedDevice.cancelConnection!();
+        assert.strictEqual(disconnectedDevice.id, 'full-methods-test', 'Should return the same device after disconnection');
+        
+        // Verify device is no longer connected using device method
+        const isConnectedFinal = await disconnectedDevice.isConnected!();
+        assert.strictEqual(isConnectedFinal, false, 'Device should report as disconnected after cancellation');
+        
+        // Verify device is no longer connected using manager method
+        const isConnectedViaManager = bleManager.isDeviceConnected('full-methods-test');
+        assert.strictEqual(isConnectedViaManager, false, 'Manager should also report device as disconnected');
+    });
 });

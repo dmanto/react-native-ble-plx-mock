@@ -385,6 +385,24 @@ var MockBleManager = class {
       } : void 0,
       discoverAllServicesAndCharacteristics: async () => {
         return this.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      },
+      writeCharacteristicWithResponseForService: async (serviceUUID, characteristicUUID, base64Value, transactionId) => {
+        return this.writeCharacteristicWithResponseForDevice(device.id, serviceUUID, characteristicUUID, base64Value, transactionId);
+      },
+      writeCharacteristicWithoutResponseForService: async (serviceUUID, characteristicUUID, base64Value, transactionId) => {
+        return this.writeCharacteristicWithoutResponseForDevice(device.id, serviceUUID, characteristicUUID, base64Value, transactionId);
+      },
+      readCharacteristicForService: async (serviceUUID, characteristicUUID, transactionId) => {
+        return this.readCharacteristicForDevice(device.id, serviceUUID, characteristicUUID, transactionId);
+      },
+      monitorCharacteristicForService: (serviceUUID, characteristicUUID, listener, transactionId) => {
+        return this.monitorCharacteristicForDevice(device.id, serviceUUID, characteristicUUID, listener, transactionId);
+      },
+      isConnected: async () => {
+        return this.isDeviceConnected(device.id);
+      },
+      cancelConnection: async () => {
+        return this.cancelDeviceConnection(device.id);
       }
     };
     this.discoveredDevices.set(device.id, mockDevice);

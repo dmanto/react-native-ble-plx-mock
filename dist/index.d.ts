@@ -20,6 +20,12 @@ interface MockDevice {
     isConnectable?: boolean;
     services?: () => Promise<Service[]>;
     discoverAllServicesAndCharacteristics?: () => Promise<MockDevice>;
+    writeCharacteristicWithResponseForService?: (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => Promise<Characteristic>;
+    writeCharacteristicWithoutResponseForService?: (serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId) => Promise<Characteristic>;
+    readCharacteristicForService?: (serviceUUID: UUID, characteristicUUID: UUID, transactionId?: TransactionId) => Promise<Characteristic>;
+    monitorCharacteristicForService?: (serviceUUID: UUID, characteristicUUID: UUID, listener: CharacteristicListener, transactionId?: TransactionId) => MonitorSubscription;
+    isConnected?: () => Promise<boolean>;
+    cancelConnection?: () => Promise<MockDevice>;
 }
 interface Descriptor {
     uuid: UUID;
