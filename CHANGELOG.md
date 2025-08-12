@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2-beta.2](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.1...v0.2.2-beta.2) (2025-08-12)
+
+### Added
+- **NEW**: Complete device-level methods support - MockDevice objects now include all characteristic operations
+- **NEW**: `device.writeCharacteristicWithResponseForService()` method for writing characteristics with acknowledgment
+- **NEW**: `device.writeCharacteristicWithoutResponseForService()` method for writing characteristics without acknowledgment  
+- **NEW**: `device.readCharacteristicForService()` method for reading characteristic values
+- **NEW**: `device.monitorCharacteristicForService()` method for monitoring characteristic changes
+- **NEW**: `device.isConnected()` method for checking connection status
+- **NEW**: `device.cancelConnection()` method for disconnecting from device
+- **NEW**: Comprehensive test coverage for all device-level methods in both Node.js and Jest test suites
+- **NEW**: Updated npm test command to run both Node.js and Jest tests automatically
+
+### Enhanced
+- **IMPROVED**: MockDevice objects now provide complete 1:1 API compatibility with real react-native-ble-plx devices
+- **ENHANCED**: All device-level methods properly delegate to the manager's existing implementations
+- **IMPROVED**: Test coverage increased with comprehensive device-level methods testing
+- **ENHANCED**: README documentation with device-level methods examples and API reference
+
+### Fixed
+- **API CONSISTENCY**: MockDevice objects now support all standard device operations like real BLE devices
+- **DEVELOPER EXPERIENCE**: Tests can now use identical code patterns as production applications
+
 ### [0.2.2-beta.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.0...v0.2.2-beta.1) (2025-08-12)
 
 
