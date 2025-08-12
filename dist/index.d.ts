@@ -27,6 +27,21 @@ interface MockDevice {
     isConnected?: () => Promise<boolean>;
     cancelConnection?: () => Promise<MockDevice>;
 }
+/**
+ * Configuration interface for adding mock devices via addMockDevice()
+ * This uses ServiceMetadata[] for services, which gets converted to the async function format
+ */
+interface MockDeviceConfig {
+    id: string;
+    name?: string | null;
+    rssi?: number | null;
+    mtu?: number;
+    manufacturerData?: string | null;
+    serviceData?: Record<string, string> | null;
+    serviceUUIDs?: string[] | null;
+    isConnectable?: boolean;
+    services?: ServiceMetadata[];
+}
 interface Descriptor {
     uuid: UUID;
     characteristicUUID: UUID;
@@ -228,10 +243,7 @@ declare class MockBleManager {
      * Notify connection listeners
      */
     private notifyConnectionListeners;
-    addMockDevice(device: Partial<MockDevice> & {
-        id: string;
-        services?: ServiceMetadata[];
-    }): void;
+    addMockDevice(device: MockDeviceConfig): void;
     removeMockDevice(deviceId: string): void;
     clearMockDevices(): void;
     /**
@@ -345,4 +357,4 @@ declare class MockBleManager {
     destroy(): void;
 }
 
-export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type CharacteristicProperties, type ConnectionOptions, type Descriptor, type DescriptorMetadata, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };
+export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type CharacteristicProperties, type ConnectionOptions, type Descriptor, type DescriptorMetadata, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MockDeviceConfig, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };

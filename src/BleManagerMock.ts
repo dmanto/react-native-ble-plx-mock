@@ -38,6 +38,22 @@ export interface MockDevice {
     cancelConnection?: () => Promise<MockDevice>;
 }
 
+/**
+ * Configuration interface for adding mock devices via addMockDevice()
+ * This uses ServiceMetadata[] for services, which gets converted to the async function format
+ */
+export interface MockDeviceConfig {
+    id: string;
+    name?: string | null;
+    rssi?: number | null;
+    mtu?: number;
+    manufacturerData?: string | null;
+    serviceData?: Record<string, string> | null;
+    serviceUUIDs?: string[] | null;
+    isConnectable?: boolean;
+    services?: ServiceMetadata[]; // Static service configuration
+}
+
 export interface Descriptor {
     uuid: UUID;
     characteristicUUID: UUID;
@@ -627,7 +643,7 @@ export class MockBleManager {
     // ======================
     // Device Scanning
     // ======================
-    addMockDevice(device: Partial<MockDevice> & { id: string; services?: ServiceMetadata[] }) {
+    addMockDevice(device: MockDeviceConfig) {
         // Default to connectable if not specified
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
