@@ -6,15 +6,16 @@
 [![Coverage Status](https://codecov.io/gh/dmanto/react-native-ble-plx-mock/branch/main/graph/badge.svg)](https://codecov.io/gh/dmanto/react-native-ble-plx-mock)
 [![npm version](https://badge.fury.io/js/react-native-ble-plx-mock.svg)](https://www.npmjs.com/package/react-native-ble-plx-mock)
 
-## Current Status: Beta v0.2.x
+## Current Status: Beta v0.2.2-beta.3
 
 ✅ **Comprehensive BLE functionality** including scanning, connections, characteristic operations  
+✅ **Complete device-level API** - MockDevice objects support all device methods (read, write, monitor, etc.)  
 ✅ **Error simulation** for robust testing  
 ✅ **Drop-in replacement** compatibility with react-native-ble-plx  
-✅ **90%+ test coverage** with extensive test suite  
-✅ **TypeScript support** with full type definitions  
+✅ **91%+ test coverage** with extensive test suite  
+✅ **TypeScript support** with full type definitions and improved type safety  
 
-> **Note**: This is a stable beta release. The API is feature-complete and may receive minor enhancements before the 1.0 release.
+> **Note**: This is a stable beta release with recent fixes for type consistency and service discovery improvements. The API is feature-complete and ready for production testing.
 
 A comprehensive mocking library for `react-native-ble-plx` that enables reliable testing of Bluetooth Low Energy (BLE) functionality in React Native applications.
 
