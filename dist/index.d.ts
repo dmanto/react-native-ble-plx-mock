@@ -84,6 +84,7 @@ interface Service {
     deviceID: DeviceId;
     isPrimary?: boolean;
     includedServices?: string[];
+    characteristics?: () => Promise<CharacteristicMetadata[]>;
 }
 interface CharacteristicMetadata {
     uuid: UUID;
@@ -294,7 +295,12 @@ declare class MockBleManager {
     stopSimulatedNotifications(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID): void;
     private stopSimulatedNotificationsForKey;
     simulateCharacteristicError(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, error: Error): void;
-    private notifyCharacteristicChange;
+    /**
+     * Public method to notify characteristic change for testing
+     * First sets the characteristic value, then notifies listeners
+     */
+    notifyCharacteristicChange(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, value: string): void;
+    private _notifyCharacteristicChange;
     private getCharacteristicKey;
     /**
      * Simulate read operation with optional delay

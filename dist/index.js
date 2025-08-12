@@ -380,7 +380,11 @@ var MockBleManager = class {
         return device.services.map((service) => ({
           uuid: service.uuid,
           deviceID: device.id,
-          isPrimary: true
+          isPrimary: true,
+          characteristics: async () => {
+            console.log(`\u{1F50D} Mock service ${service.uuid} characteristics:`, service.characteristics?.length || 0, service.characteristics);
+            return service.characteristics || [];
+          }
         }));
       } : void 0,
       discoverAllServicesAndCharacteristics: async () => {
@@ -656,14 +660,14 @@ var MockBleManager = class {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     this.characteristicValues.set(key, value);
     if (options.notify) {
-      this.notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
+      this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
     }
   }
   startSimulatedNotifications(deviceIdentifier, serviceUUID, characteristicUUID, intervalMs = 1e3) {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     this.stopSimulatedNotificationsForKey(key);
     const interval = setInterval(() => {
-      this.notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
+      this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
     }, intervalMs);
     this.notificationIntervals.set(key, interval);
   }
@@ -686,7 +690,14 @@ var MockBleManager = class {
   // ======================
   // Helper Methods
   // ======================
-  notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID) {
+  /**
+   * Public method to notify characteristic change for testing
+   * First sets the characteristic value, then notifies listeners
+   */
+  notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID, value) {
+    this.setCharacteristicValue(deviceIdentifier, serviceUUID, characteristicUUID, value, { notify: true });
+  }
+  _notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID) {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     const value = this.characteristicValues.get(key) || null;
     const listeners = this.monitoredCharacteristics.get(key) || [];

@@ -100,6 +100,7 @@ export interface Service {
     deviceID: DeviceId;
     isPrimary?: boolean;
     includedServices?: string[];
+    characteristics?: () => Promise<CharacteristicMetadata[]>; // Add characteristics method
 }
 
 export interface CharacteristicMetadata {
@@ -669,7 +670,12 @@ export class MockBleManager {
                 return device.services!.map(service => ({
                     uuid: service.uuid,
                     deviceID: device.id,
-                    isPrimary: true
+                    isPrimary: true,
+                    characteristics: async () => {
+                        // Return the characteristics for this service
+                        console.log(`🔍 Mock service ${service.uuid} characteristics:`, service.characteristics?.length || 0, service.characteristics);
+                        return service.characteristics || [];
+                    }
                 }));
             } : undefined,
             discoverAllServicesAndCharacteristics: async () => {
@@ -1080,7 +1086,7 @@ export class MockBleManager {
         this.characteristicValues.set(key, value);
 
         if (options.notify) {
-            this.notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
+            this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
         }
     }
 
@@ -1094,7 +1100,7 @@ export class MockBleManager {
         this.stopSimulatedNotificationsForKey(key);
 
         const interval = setInterval(() => {
-            this.notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
+            this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
         }, intervalMs);
 
         this.notificationIntervals.set(key, interval);
@@ -1131,7 +1137,22 @@ export class MockBleManager {
     // ======================
     // Helper Methods
     // ======================
-    private notifyCharacteristicChange(
+    
+    /**
+     * Public method to notify characteristic change for testing
+     * First sets the characteristic value, then notifies listeners
+     */
+    notifyCharacteristicChange(
+        deviceIdentifier: DeviceId,
+        serviceUUID: UUID,
+        characteristicUUID: UUID,
+        value: string
+    ) {
+        // Set the value first
+        this.setCharacteristicValue(deviceIdentifier, serviceUUID, characteristicUUID, value, { notify: true });
+    }
+    
+    private _notifyCharacteristicChange(
         deviceIdentifier: DeviceId,
         serviceUUID: UUID,
         characteristicUUID: UUID
