@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2-beta.3](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.1...v0.2.2-beta.3) (2025-08-12)
+
+
+### Features
+
+* add complete device-level methods support ([a7c8d06](https://github.com/dmanto/react-native-ble-plx-mock/commit/a7c8d06b378a3fa6fb275ca93dcf1e24159146ae))
+
+
+### Bug Fixes
+
+* type inconsistencies and service discovery improvements ([fe1f519](https://github.com/dmanto/react-native-ble-plx-mock/commit/fe1f519751f7a1167b4223f1e0218c9115adf19f))
+
+### [0.2.2-beta.3](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.2...v0.2.2-beta.3) (2025-08-12)
+
+### Fixed
+- **CRITICAL**: Fixed type inconsistency for MockDevice services property - now properly typed and implemented
+- **API**: Added missing `MockDeviceConfig` interface export for proper TypeScript usage
+- **SERVICE DISCOVERY**: Fixed Service interface to include characteristics method for proper service-level characteristic access
+- **NOTIFICATIONS**: Enhanced `notifyCharacteristicChange` method - now public with proper value setting and notification
+- **DEBUGGING**: Added service characteristics logging for better development debugging experience
+- **INTERNAL**: Refactored internal notification methods for better separation of concerns
+
+### Enhanced
+- **TYPESCRIPT**: Improved type safety and consistency across MockDevice interfaces
+- **API COMPATIBILITY**: Better alignment with react-native-ble-plx Service interface structure
+- **DEVELOPER EXPERIENCE**: Clearer method signatures and better error handling
+
 ### [0.2.2-beta.2](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.2-beta.1...v0.2.2-beta.2) (2025-08-12)
 
 ### Added
