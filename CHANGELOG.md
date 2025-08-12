@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [0.2.2-beta.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.1...v0.2.2-beta.0) (2025-08-11)
+### [0.2.2-beta.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v0.2.1...v0.2.2-beta.0) (2025-08-12)
 
-## [0.2.2-beta.0] - 2025-08-11
+## [0.2.2-beta.0] - 2025-08-12
 
 ### Added
 - **NEW**: `discoverAllServicesAndCharacteristicsForDevice()` method for proper BLE service discovery workflow
@@ -15,13 +15,16 @@ All notable changes to this project will be documented in this file. See [standa
 - **NEW**: Support for complex service metadata including descriptors and properties
 
 ### Changed
+- **BREAKING**: `MockDevice.services` is now an async function `() => Promise<Service[]>` instead of `ServiceMetadata[]` (matches real react-native-ble-plx API)
 - **BREAKING**: Services and characteristics now require discovery before access (matches real BLE behavior)
 - **BREAKING**: Removed internal `deviceServicesMetadata` storage in favor of static device service data
 - **MODERNIZED**: Eliminated CommonJS dependencies in favor of pure ES modules approach
 - **IMPROVED**: Test file organization with separate Node.js (`*.node.test.ts`) and Jest (`*.jest.test.ts`) files
 - **ENHANCED**: README with modern Jest configuration and service discovery examples
+- **IMPROVED**: Internal service metadata storage for better API consistency
 
 ### Fixed
+- **CRITICAL**: `MockDevice.services` now correctly returns an async function matching the real BLE API behavior
 - Service discovery flow now properly matches react-native-ble-plx behavior
 - Simplified mock architecture by removing redundant service metadata storage
 - TypeScript configuration updated to support both Node.js and Jest testing environments

@@ -272,9 +272,10 @@ interface MockDevice {
   serviceData?: string | null; // base64
   serviceUUIDs?: string[];
   isConnectable?: boolean;
-  services?: ServiceMetadata[]; // Full service definitions for discovery
+  services?: () => Promise<Service[]>; // Async function for service discovery (matches real API)
 }
 
+// When adding devices, provide services as ServiceMetadata[] - will be converted to async function
 interface ServiceMetadata {
   uuid: string;
   characteristics: CharacteristicMetadata[];
