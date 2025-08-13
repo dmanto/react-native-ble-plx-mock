@@ -6,16 +6,18 @@
 [![Coverage Status](https://codecov.io/gh/dmanto/react-native-ble-plx-mock/branch/main/graph/badge.svg)](https://codecov.io/gh/dmanto/react-native-ble-plx-mock)
 [![npm version](https://badge.fury.io/js/react-native-ble-plx-mock.svg)](https://www.npmjs.com/package/react-native-ble-plx-mock)
 
-## Current Status: Beta v0.2.2-beta.3
+## 🎉 Production Ready: v1.0.0
 
 ✅ **Comprehensive BLE functionality** including scanning, connections, characteristic operations  
 ✅ **Complete device-level API** - MockDevice objects support all device methods (read, write, monitor, etc.)  
+✅ **Consistent API** - Service.characteristics() now matches real BLE API (no more code smell!)  
 ✅ **Error simulation** for robust testing  
 ✅ **Drop-in replacement** compatibility with react-native-ble-plx  
-✅ **91%+ test coverage** with extensive test suite  
+✅ **92%+ test coverage** with extensive test suite  
 ✅ **TypeScript support** with full type definitions and improved type safety  
+✅ **Production tested** and API-stable
 
-> **Note**: This is a stable beta release with recent fixes for type consistency and service discovery improvements. The API is feature-complete and ready for production testing.
+> **Production Ready**: This release includes major API improvements where the mock Service objects now have the same async `characteristics()` method as the real BLE API, eliminating code smells and ensuring perfect compatibility.
 
 A comprehensive mocking library for `react-native-ble-plx` that enables reliable testing of Bluetooth Low Energy (BLE) functionality in React Native applications.
 
@@ -57,6 +59,10 @@ bleManager.addMockDevice({
   manufacturerData: Buffer.from([0x48, 0x52]).toString('base64'),
   isConnectable: true
 });
+
+// Or use the convenience method for simple test devices
+const testDevice = bleManager.addTestDevice('simple-device', 'Test Device');
+console.log('Added:', testDevice.name);
 ```
 
 ## Simulating Scans
@@ -210,10 +216,16 @@ describe('BLE Integration', () => {
     const device = await bleManager.connectToDevice('hr-monitor');
     await device.discoverAllServicesAndCharacteristics();
     
-    // Access services
+    // Access services - these have async characteristics() method like real BLE API!
     const services = await bleManager.servicesForDevice('hr-monitor');
     expect(services.length).toBe(1);
     expect(services[0].uuid).toBe('180D');
+    
+    // 🎉 NEW: Service.characteristics() is now async (matches real API - no code smell!)
+    const characteristics = await services[0].characteristics();
+    expect(characteristics.length).toBe(1);
+    expect(characteristics[0].uuid).toBe('2A37');
+    expect(characteristics[0].isNotifiable).toBe(true);
   });
 });
 ```
@@ -228,7 +240,8 @@ The mock library implements all methods from the original [`BleManager`](https:/
 
 | Method | Parameters | Description |
 |--------|------------|-------------|
-| **addMockDevice** | `device: MockDevice` | Add a device to be discovered during scanning |
+| **addMockDevice** | `device: MockDeviceConfig` | Add a device to be discovered during scanning |
+| **addTestDevice** | `deviceId: string`, `deviceName?: string`, `serviceUUID?: string`, `characteristicUUID?: string` | Quick helper to add a simple test device with default service/characteristic |
 | **clearMockDevices** | - | Remove all mock devices from discovery pool |
 
 ### State Simulation

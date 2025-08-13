@@ -1189,14 +1189,17 @@ describe('MockBleManager', () => {
         
         assert.ok(deviceFromScan, 'Device should be found during scan');
         
+        // Type assertion after the null check
+        const device = deviceFromScan as MockDevice;
+        
         // Verify discoverAllServicesAndCharacteristics method exists on device
         assert.ok(
-            typeof deviceFromScan.discoverAllServicesAndCharacteristics === 'function',
+            typeof device.discoverAllServicesAndCharacteristics === 'function',
             'Device should have discoverAllServicesAndCharacteristics method'
         );
 
         // Connect to device
-        const connectedDevice = await bleManager.connectToDevice(deviceFromScan.id);
+        const connectedDevice = await bleManager.connectToDevice(device.id);
         
         // Services should not be available before discovery
         await assert.rejects(
@@ -1214,6 +1217,101 @@ describe('MockBleManager', () => {
         assert.strictEqual(services.length, 1);
         assert.strictEqual(services[0].uuid, serviceUUID);
         assert.strictEqual(services[0].deviceID, 'device-method-test');
+    });
+
+    it('should support Service.characteristics() async method', async () => {
+        // Test that Service objects returned by servicesForDevice() have async characteristics() method
+        // that returns Characteristic[] (not CharacteristicMetadata[])
+        
+        const servicesMetadata = [
+            {
+                uuid: serviceUUID, // '180D' Heart Rate Service
+                characteristics: [
+                    {
+                        uuid: charUUID, // '2A37' Heart Rate Measurement
+                        isReadable: true,
+                        isNotifiable: true,
+                        properties: { read: true, notify: true }
+                    },
+                    {
+                        uuid: '2A39', // Heart Rate Control Point
+                        isReadable: false,
+                        isWritableWithResponse: true,
+                        properties: { write: true }
+                    }
+                ]
+            },
+            {
+                uuid: '180F', // Battery Service
+                characteristics: [
+                    {
+                        uuid: '2A19', // Battery Level
+                        isReadable: true,
+                        isNotifiable: true,
+                        properties: { read: true, notify: true }
+                    }
+                ]
+            }
+        ];
+
+        // Add device with services containing characteristics
+        bleManager.addMockDevice({
+            id: 'service-char-test',
+            name: 'Service Characteristics Test',
+            services: servicesMetadata,
+            isConnectable: true
+        });
+
+        // Connect and discover
+        await bleManager.connectToDevice('service-char-test');
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice('service-char-test');
+        
+        // Get services - these should be Service objects with async characteristics() method
+        const services = await bleManager.servicesForDevice('service-char-test');
+        assert.strictEqual(services.length, 2, 'Should have 2 services');
+        
+        // Test heart rate service
+        const heartRateService = services.find(s => s.uuid === serviceUUID);
+        assert.ok(heartRateService, 'Should find heart rate service');
+        assert.strictEqual(heartRateService.deviceID, 'service-char-test');
+        
+        // THIS IS THE CRITICAL TEST: characteristics() should be async and return Characteristic[]
+        assert.ok(typeof heartRateService.characteristics === 'function', 'Service should have characteristics method');
+        
+        const hrCharacteristics = await heartRateService.characteristics();
+        assert.ok(Array.isArray(hrCharacteristics), 'characteristics() should return an array');
+        assert.strictEqual(hrCharacteristics.length, 2, 'Heart rate service should have 2 characteristics');
+        
+        // Verify these are Characteristic objects (not CharacteristicMetadata)
+        const hrMeasurement = hrCharacteristics.find(c => c.uuid === charUUID);
+        assert.ok(hrMeasurement, 'Should find heart rate measurement characteristic');
+        assert.strictEqual(hrMeasurement.serviceUUID, serviceUUID, 'Characteristic should have serviceUUID');
+        assert.strictEqual(hrMeasurement.deviceID, 'service-char-test', 'Characteristic should have deviceID');
+        assert.strictEqual(hrMeasurement.isReadable, true, 'Characteristic should be readable');
+        assert.strictEqual(hrMeasurement.isNotifiable, true, 'Characteristic should be notifiable');
+        assert.ok(hrMeasurement.hasOwnProperty('value'), 'Characteristic should have value property (even if null)');
+        
+        const hrControlPoint = hrCharacteristics.find(c => c.uuid === '2A39');
+        assert.ok(hrControlPoint, 'Should find heart rate control point characteristic');
+        assert.strictEqual(hrControlPoint.isReadable, false, 'Control point should not be readable');
+        assert.strictEqual(hrControlPoint.isWritableWithResponse, true, 'Control point should be writable with response');
+        
+        // Test battery service
+        const batteryService = services.find(s => s.uuid === '180F');
+        assert.ok(batteryService, 'Should find battery service');
+        
+        const batteryCharacteristics = await batteryService.characteristics();
+        assert.strictEqual(batteryCharacteristics.length, 1, 'Battery service should have 1 characteristic');
+        
+        const batteryLevel = batteryCharacteristics[0];
+        assert.strictEqual(batteryLevel.uuid, '2A19', 'Should be battery level characteristic');
+        assert.strictEqual(batteryLevel.serviceUUID, '180F', 'Characteristic should belong to battery service');
+        assert.strictEqual(batteryLevel.deviceID, 'service-char-test', 'Characteristic should belong to correct device');
+        
+        // The key test: Verify this is consistent with real BLE API behavior
+        // Both mock and real APIs should now have identical async characteristics() method
+        console.log('✅ Service.characteristics() returns Promise<Characteristic[]> as expected');
+        console.log('✅ Mock API now matches real BLE API - no more code smell!');
     });
 
     it('should support all device-level methods', async () => {
@@ -1263,28 +1361,31 @@ describe('MockBleManager', () => {
         
         assert.ok(deviceFromScan, 'Device should be found during scan');
         
+        // Type assertion after the null check
+        const scanDevice = deviceFromScan as MockDevice;
+        
         // Verify all device methods exist
-        assert.ok(typeof deviceFromScan.discoverAllServicesAndCharacteristics === 'function',
+        assert.ok(typeof scanDevice.discoverAllServicesAndCharacteristics === 'function',
             'Device should have discoverAllServicesAndCharacteristics method');
-        assert.ok(typeof deviceFromScan.isConnected === 'function',
+        assert.ok(typeof scanDevice.isConnected === 'function',
             'Device should have isConnected method');
-        assert.ok(typeof deviceFromScan.cancelConnection === 'function',
+        assert.ok(typeof scanDevice.cancelConnection === 'function',
             'Device should have cancelConnection method');
-        assert.ok(typeof deviceFromScan.readCharacteristicForService === 'function',
+        assert.ok(typeof scanDevice.readCharacteristicForService === 'function',
             'Device should have readCharacteristicForService method');
-        assert.ok(typeof deviceFromScan.writeCharacteristicWithResponseForService === 'function',
+        assert.ok(typeof scanDevice.writeCharacteristicWithResponseForService === 'function',
             'Device should have writeCharacteristicWithResponseForService method');
-        assert.ok(typeof deviceFromScan.writeCharacteristicWithoutResponseForService === 'function',
+        assert.ok(typeof scanDevice.writeCharacteristicWithoutResponseForService === 'function',
             'Device should have writeCharacteristicWithoutResponseForService method');
-        assert.ok(typeof deviceFromScan.monitorCharacteristicForService === 'function',
+        assert.ok(typeof scanDevice.monitorCharacteristicForService === 'function',
             'Device should have monitorCharacteristicForService method');
 
         // Test isConnected method (should be false before connection)
-        let isConnectedBefore = await deviceFromScan.isConnected!();
+        let isConnectedBefore = await scanDevice.isConnected!();
         assert.strictEqual(isConnectedBefore, false, 'Device should not be connected initially');
 
         // Connect to device
-        const connectedDevice = await bleManager.connectToDevice(deviceFromScan.id);
+        const connectedDevice = await bleManager.connectToDevice(scanDevice.id);
         
         // Test isConnected method (should be true after connection)
         const isConnectedAfter = await connectedDevice.isConnected!();

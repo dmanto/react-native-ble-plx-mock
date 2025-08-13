@@ -29,7 +29,7 @@ interface MockDevice {
 }
 /**
  * Configuration interface for adding mock devices via addMockDevice()
- * This uses ServiceMetadata[] for services, which gets converted to the async function format
+ * Uses ServiceConfig[] for simple static-to-async conversion
  */
 interface MockDeviceConfig {
     id: string;
@@ -40,7 +40,7 @@ interface MockDeviceConfig {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
-    services?: ServiceMetadata[];
+    services?: ServiceConfig[];
 }
 interface Descriptor {
     uuid: UUID;
@@ -84,7 +84,22 @@ interface Service {
     deviceID: DeviceId;
     isPrimary?: boolean;
     includedServices?: string[];
-    characteristics?: () => Promise<CharacteristicMetadata[]>;
+    characteristics(): Promise<Characteristic[]>;
+}
+interface CharacteristicConfig {
+    uuid: UUID;
+    isReadable?: boolean;
+    isWritableWithResponse?: boolean;
+    isWritableWithoutResponse?: boolean;
+    isNotifiable?: boolean;
+    isIndicatable?: boolean;
+    isNotifying?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: DescriptorMetadata[];
+}
+interface ServiceConfig {
+    uuid: UUID;
+    characteristics: CharacteristicConfig[];
 }
 interface CharacteristicMetadata {
     uuid: UUID;
@@ -244,6 +259,10 @@ declare class MockBleManager {
      * Notify connection listeners
      */
     private notifyConnectionListeners;
+    /**
+     * Convenient helper method for tests - adds a simple test device with basic service/characteristic setup
+     */
+    addTestDevice(deviceId: string, deviceName?: string, serviceUUID?: string, characteristicUUID?: string): MockDevice;
     addMockDevice(device: MockDeviceConfig): void;
     removeMockDevice(deviceId: string): void;
     clearMockDevices(): void;
@@ -289,7 +308,7 @@ declare class MockBleManager {
     writeCharacteristicWithoutResponseForDevice(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, base64Value: string, transactionId?: TransactionId): Promise<Characteristic>;
     monitorCharacteristicForDevice(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, listener: CharacteristicListener, transactionId?: TransactionId): MonitorSubscription;
     setCharacteristicValue(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, value: string, options?: {
-        notify: boolean;
+        notify?: boolean;
     }): void;
     startSimulatedNotifications(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID, intervalMs?: number): void;
     stopSimulatedNotifications(deviceIdentifier: DeviceId, serviceUUID: UUID, characteristicUUID: UUID): void;
@@ -363,4 +382,4 @@ declare class MockBleManager {
     destroy(): void;
 }
 
-export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicMetadata, type CharacteristicProperties, type ConnectionOptions, type Descriptor, type DescriptorMetadata, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MockDeviceConfig, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };
+export { MockBleManager as BleManager, type BleManagerOptions, type Characteristic, type CharacteristicConfig, type CharacteristicMetadata, type CharacteristicProperties, type ConnectionOptions, type Descriptor, type DescriptorMetadata, type MockDevice as Device, type DeviceId, MockBleManager, type MockDevice, type MockDeviceConfig, type MtuChangedListener, type RestoredState, type ScanOptions, type Service, type ServiceConfig, type ServiceMetadata, type State, type Subscription, type TransactionId, type UUID };

@@ -453,6 +453,99 @@ describe('BLE Integration (Jest)', () => {
     )).resolves.toBeDefined();
   });
 
+  it('should support Service.characteristics() async method (matches real BLE API)', async () => {
+    // This test demonstrates the key API improvement: Service objects now have consistent async characteristics() method
+    // that matches the real react-native-ble-plx API (no more code smell!)
+    
+    const servicesMetadata = [
+      {
+        uuid: serviceUUID, // '180D' Heart Rate Service
+        characteristics: [
+          {
+            uuid: charUUID, // '2A37' Heart Rate Measurement
+            isReadable: true,
+            isNotifiable: true,
+            properties: { read: true, notify: true }
+          },
+          {
+            uuid: '2A39', // Heart Rate Control Point
+            isReadable: false,
+            isWritableWithResponse: true,
+            properties: { write: true }
+          }
+        ]
+      },
+      {
+        uuid: '180F', // Battery Service
+        characteristics: [
+          {
+            uuid: '2A19', // Battery Level
+            isReadable: true,
+            isNotifiable: true,
+            properties: { read: true, notify: true }
+          }
+        ]
+      }
+    ];
+
+    // Add device with services containing characteristics
+    bleManager.addMockDevice({
+      id: 'service-api-test',
+      name: 'Service API Test Device',
+      services: servicesMetadata,
+      isConnectable: true
+    });
+
+    // Connect and discover
+    await bleManager.connectToDevice('service-api-test');
+    await bleManager.discoverAllServicesAndCharacteristicsForDevice('service-api-test');
+    
+    // Get services - these have async characteristics() method just like real API
+    const services = await bleManager.servicesForDevice('service-api-test');
+    expect(services.length).toBe(2);
+    
+    // Test heart rate service
+    const heartRateService = services.find((s: any) => s.uuid === serviceUUID);
+    expect(heartRateService).toBeDefined();
+    expect(heartRateService.deviceID).toBe('service-api-test');
+    
+    // CRITICAL: This is the same as real BLE API - async characteristics() method!
+    expect(typeof heartRateService.characteristics).toBe('function');
+    
+    const hrCharacteristics = await heartRateService.characteristics();
+    expect(Array.isArray(hrCharacteristics)).toBe(true);
+    expect(hrCharacteristics.length).toBe(2);
+    
+    // Verify these are proper Characteristic objects (not metadata)
+    const hrMeasurement = hrCharacteristics.find((c: any) => c.uuid === charUUID);
+    expect(hrMeasurement).toBeDefined();
+    expect(hrMeasurement.serviceUUID).toBe(serviceUUID);
+    expect(hrMeasurement.deviceID).toBe('service-api-test');
+    expect(hrMeasurement.isReadable).toBe(true);
+    expect(hrMeasurement.isNotifiable).toBe(true);
+    expect(hrMeasurement.hasOwnProperty('value')).toBe(true); // Has value property
+    
+    const hrControlPoint = hrCharacteristics.find((c: any) => c.uuid === '2A39');
+    expect(hrControlPoint).toBeDefined();
+    expect(hrControlPoint.isReadable).toBe(false);
+    expect(hrControlPoint.isWritableWithResponse).toBe(true);
+    
+    // Test battery service
+    const batteryService = services.find((s: any) => s.uuid === '180F');
+    expect(batteryService).toBeDefined();
+    
+    const batteryCharacteristics = await batteryService.characteristics();
+    expect(batteryCharacteristics.length).toBe(1);
+    
+    const batteryLevel = batteryCharacteristics[0];
+    expect(batteryLevel.uuid).toBe('2A19');
+    expect(batteryLevel.serviceUUID).toBe('180F');
+    expect(batteryLevel.deviceID).toBe('service-api-test');
+    
+    // 🎉 SUCCESS: Mock and real APIs now have identical service.characteristics() behavior!
+    console.log('✅ Mock Service.characteristics() matches real BLE API');
+  });
+
   it('should support all device-level methods', async () => {
     // Define service structure with comprehensive characteristics
     const servicesMetadata = [

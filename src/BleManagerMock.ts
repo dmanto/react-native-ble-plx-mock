@@ -40,7 +40,7 @@ export interface MockDevice {
 
 /**
  * Configuration interface for adding mock devices via addMockDevice()
- * This uses ServiceMetadata[] for services, which gets converted to the async function format
+ * Uses ServiceConfig[] for simple static-to-async conversion
  */
 export interface MockDeviceConfig {
     id: string;
@@ -51,7 +51,7 @@ export interface MockDeviceConfig {
     serviceData?: Record<string, string> | null;
     serviceUUIDs?: string[] | null;
     isConnectable?: boolean;
-    services?: ServiceMetadata[]; // Static service configuration
+    services?: ServiceConfig[]; // Simple service configuration
 }
 
 export interface Descriptor {
@@ -100,9 +100,28 @@ export interface Service {
     deviceID: DeviceId;
     isPrimary?: boolean;
     includedServices?: string[];
-    characteristics?: () => Promise<CharacteristicMetadata[]>; // Add characteristics method
+    characteristics(): Promise<Characteristic[]>; // Must be non-optional and return Characteristic[], not CharacteristicMetadata[]
 }
 
+// Simple configuration interfaces for addMockDevice()
+export interface CharacteristicConfig {
+    uuid: UUID;
+    isReadable?: boolean;
+    isWritableWithResponse?: boolean;
+    isWritableWithoutResponse?: boolean;
+    isNotifiable?: boolean;
+    isIndicatable?: boolean;
+    isNotifying?: boolean;
+    properties?: CharacteristicProperties;
+    descriptors?: DescriptorMetadata[];
+}
+
+export interface ServiceConfig {
+    uuid: UUID;
+    characteristics: CharacteristicConfig[];
+}
+
+// Internal metadata interfaces for backward compatibility
 export interface CharacteristicMetadata {
     uuid: UUID;
     isReadable?: boolean;
@@ -644,15 +663,60 @@ export class MockBleManager {
     // ======================
     // Device Scanning
     // ======================
+    
+    /**
+     * Convenient helper method for tests - adds a simple test device with basic service/characteristic setup
+     */
+    addTestDevice(
+        deviceId: string,
+        deviceName: string = 'Test Device',
+        serviceUUID: string = '12345678-1234-1234-1234-123456789abc',
+        characteristicUUID: string = '87654321-4321-4321-4321-cba987654321'
+    ): MockDevice {
+        const device: MockDeviceConfig = {
+            id: deviceId,
+            name: deviceName,
+            isConnectable: true,
+            services: [{
+                uuid: serviceUUID,
+                characteristics: [{
+                    uuid: characteristicUUID,
+                    isReadable: true,
+                    isWritableWithResponse: true,
+                    isWritableWithoutResponse: true,
+                    isNotifiable: true,
+                    isIndicatable: false
+                }]
+            }]
+        };
+        
+        this.addMockDevice(device);
+        return this.discoveredDevices.get(deviceId)!;
+    }
+
     addMockDevice(device: MockDeviceConfig) {
         // Default to connectable if not specified
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
         }
         
-        // Store service metadata separately for internal use
+        // Store service metadata separately for internal use (convert ServiceConfig to CharacteristicMetadata)
         if (device.services) {
-            this.serviceMetadata.set(device.id, device.services);
+            const serviceMetadata = device.services.map(serviceConfig => ({
+                uuid: serviceConfig.uuid,
+                characteristics: serviceConfig.characteristics.map(charConfig => ({
+                    uuid: charConfig.uuid,
+                    isReadable: charConfig.isReadable ?? true,
+                    isWritableWithResponse: charConfig.isWritableWithResponse ?? false,
+                    isWritableWithoutResponse: charConfig.isWritableWithoutResponse ?? false,
+                    isNotifiable: charConfig.isNotifiable ?? true,
+                    isIndicatable: charConfig.isIndicatable ?? false,
+                    isNotifying: charConfig.isNotifying ?? false,
+                    properties: charConfig.properties,
+                    descriptors: charConfig.descriptors
+                })) as CharacteristicMetadata[]
+            })) as ServiceMetadata[];
+            this.serviceMetadata.set(device.id, serviceMetadata);
         }
         
         // Create the mock device with async services function and all device-level methods
@@ -666,15 +730,33 @@ export class MockBleManager {
             serviceUUIDs: device.services ? device.services.map(s => s.uuid) : (device.serviceUUIDs ?? null),
             isConnectable: device.isConnectable,
             services: device.services ? async () => {
-                // Convert ServiceMetadata to Service objects
+                // Convert ServiceConfig to Service objects
                 return device.services!.map(service => ({
                     uuid: service.uuid,
                     deviceID: device.id,
                     isPrimary: true,
                     characteristics: async () => {
-                        // Return the characteristics for this service
-                        console.log(`🔍 Mock service ${service.uuid} characteristics:`, service.characteristics?.length || 0, service.characteristics);
-                        return service.characteristics || [];
+                        // Convert CharacteristicConfig to Characteristic objects
+                        return service.characteristics.map(charConfig => ({
+                            uuid: charConfig.uuid,
+                            serviceUUID: service.uuid,
+                            deviceID: device.id,
+                            value: null, // Default value
+                            isNotifiable: charConfig.isNotifiable ?? true,
+                            isIndicatable: charConfig.isIndicatable ?? false,
+                            isNotifying: charConfig.isNotifying ?? false,
+                            isReadable: charConfig.isReadable ?? true,
+                            isWritableWithResponse: charConfig.isWritableWithResponse ?? false,
+                            isWritableWithoutResponse: charConfig.isWritableWithoutResponse ?? false,
+                            properties: charConfig.properties,
+                            descriptors: charConfig.descriptors?.map(desc => ({
+                                uuid: desc.uuid,
+                                characteristicUUID: charConfig.uuid,
+                                serviceUUID: service.uuid,
+                                deviceID: device.id,
+                                value: desc.value || null
+                            })) as Descriptor[]
+                        })) as Characteristic[];
                     }
                 }));
             } : undefined,
@@ -1080,12 +1162,12 @@ export class MockBleManager {
         serviceUUID: UUID,
         characteristicUUID: UUID,
         value: string,
-        options: { notify: boolean } = { notify: true }
+        options?: { notify?: boolean }
     ) {
         const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
         this.characteristicValues.set(key, value);
 
-        if (options.notify) {
+        if (options?.notify !== false) {
             this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
         }
     }

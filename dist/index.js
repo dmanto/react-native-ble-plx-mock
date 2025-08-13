@@ -359,12 +359,49 @@ var MockBleManager = class {
   // ======================
   // Device Scanning
   // ======================
+  /**
+   * Convenient helper method for tests - adds a simple test device with basic service/characteristic setup
+   */
+  addTestDevice(deviceId, deviceName = "Test Device", serviceUUID = "12345678-1234-1234-1234-123456789abc", characteristicUUID = "87654321-4321-4321-4321-cba987654321") {
+    const device = {
+      id: deviceId,
+      name: deviceName,
+      isConnectable: true,
+      services: [{
+        uuid: serviceUUID,
+        characteristics: [{
+          uuid: characteristicUUID,
+          isReadable: true,
+          isWritableWithResponse: true,
+          isWritableWithoutResponse: true,
+          isNotifiable: true,
+          isIndicatable: false
+        }]
+      }]
+    };
+    this.addMockDevice(device);
+    return this.discoveredDevices.get(deviceId);
+  }
   addMockDevice(device) {
     if (device.isConnectable === void 0) {
       device.isConnectable = true;
     }
     if (device.services) {
-      this.serviceMetadata.set(device.id, device.services);
+      const serviceMetadata = device.services.map((serviceConfig) => ({
+        uuid: serviceConfig.uuid,
+        characteristics: serviceConfig.characteristics.map((charConfig) => ({
+          uuid: charConfig.uuid,
+          isReadable: charConfig.isReadable ?? true,
+          isWritableWithResponse: charConfig.isWritableWithResponse ?? false,
+          isWritableWithoutResponse: charConfig.isWritableWithoutResponse ?? false,
+          isNotifiable: charConfig.isNotifiable ?? true,
+          isIndicatable: charConfig.isIndicatable ?? false,
+          isNotifying: charConfig.isNotifying ?? false,
+          properties: charConfig.properties,
+          descriptors: charConfig.descriptors
+        }))
+      }));
+      this.serviceMetadata.set(device.id, serviceMetadata);
     }
     const mockDevice = {
       id: device.id,
@@ -382,8 +419,27 @@ var MockBleManager = class {
           deviceID: device.id,
           isPrimary: true,
           characteristics: async () => {
-            console.log(`\u{1F50D} Mock service ${service.uuid} characteristics:`, service.characteristics?.length || 0, service.characteristics);
-            return service.characteristics || [];
+            return service.characteristics.map((charConfig) => ({
+              uuid: charConfig.uuid,
+              serviceUUID: service.uuid,
+              deviceID: device.id,
+              value: null,
+              // Default value
+              isNotifiable: charConfig.isNotifiable ?? true,
+              isIndicatable: charConfig.isIndicatable ?? false,
+              isNotifying: charConfig.isNotifying ?? false,
+              isReadable: charConfig.isReadable ?? true,
+              isWritableWithResponse: charConfig.isWritableWithResponse ?? false,
+              isWritableWithoutResponse: charConfig.isWritableWithoutResponse ?? false,
+              properties: charConfig.properties,
+              descriptors: charConfig.descriptors?.map((desc) => ({
+                uuid: desc.uuid,
+                characteristicUUID: charConfig.uuid,
+                serviceUUID: service.uuid,
+                deviceID: device.id,
+                value: desc.value || null
+              }))
+            }));
           }
         }));
       } : void 0,
@@ -656,10 +712,10 @@ var MockBleManager = class {
       }
     };
   }
-  setCharacteristicValue(deviceIdentifier, serviceUUID, characteristicUUID, value, options = { notify: true }) {
+  setCharacteristicValue(deviceIdentifier, serviceUUID, characteristicUUID, value, options) {
     const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
     this.characteristicValues.set(key, value);
-    if (options.notify) {
+    if (options?.notify !== false) {
       this._notifyCharacteristicChange(deviceIdentifier, serviceUUID, characteristicUUID);
     }
   }
