@@ -2,15 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+### [1.0.2](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.1...v1.0.2) (2026-02-24)
 
-### 🐛 Bug Fixes
 
-- **FIXED**: README `MockDevice` interface now correctly documents `serviceData` as `Record<string, string> | null` (keyed by service UUID, values are base64) instead of the incorrect `string | null`
+### Documentation
 
-### 🧪 Tests
-
-- **ADDED**: Tests verifying that `serviceData` is correctly returned as `Record<string, string>` during device scan, including multi-key access (`device.serviceData?.['180D']`)
+* **fix:** correct serviceData type in README and add tests ([a64ad8a](https://github.com/dmanto/react-native-ble-plx-mock/commit/a64ad8ab98e03773e2f555a3cb9fe653e7fe4677)), closes [#1](https://github.com/dmanto/react-native-ble-plx-mock/issues/1)
 
 ## [1.0.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.0...v1.0.1) (2025-08-13)
 
