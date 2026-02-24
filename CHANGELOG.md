@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **FIXED**: README `MockDevice` interface now correctly documents `serviceData` as `Record<string, string> | null` (keyed by service UUID, values are base64) instead of the incorrect `string | null`
+
+### 🧪 Tests
+
+- **ADDED**: Tests verifying that `serviceData` is correctly returned as `Record<string, string>` during device scan, including multi-key access (`device.serviceData?.['180D']`)
+
 ## [1.0.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.0...v1.0.1) (2025-08-13)
 
 ### 🔧 TypeScript Improvements

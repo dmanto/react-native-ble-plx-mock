@@ -70,6 +70,41 @@ describe('BLE Integration (Jest)', () => {
     expect(foundDevices.some(d => d.name === 'Heart Rate Monitor')).toBe(true);
   });
 
+  it('should return serviceData as Record<string, string> during scan', async () => {
+    const heartRateData = Buffer.from([0x01, 0x02]).toString('base64');
+    const batteryData = Buffer.from([0x64]).toString('base64');
+
+    bleManager.clearMockDevices();
+    bleManager.addMockDevice({
+      id: 'service-data-device',
+      name: 'Service Data Device',
+      rssi: -60,
+      serviceData: {
+        '180D': heartRateData,
+        '180F': batteryData,
+      },
+      serviceUUIDs: ['180D', '180F'],
+      isConnectable: true,
+    });
+
+    const device = await new Promise<any>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout: device not discovered')), 2000);
+      const done = (err: Error | null, result?: any) => {
+        clearTimeout(timeout);
+        bleManager.stopDeviceScan();
+        err ? reject(err) : resolve(result);
+      };
+      bleManager.startDeviceScan(null, null, (error: any, scannedDevice: any) => {
+        if (error) done(error);
+        else if (scannedDevice && scannedDevice.id === 'service-data-device') done(null, scannedDevice);
+      });
+    });
+
+    expect(device.serviceData).not.toBeNull();
+    expect(device.serviceData['180D']).toBe(heartRateData);
+    expect(device.serviceData['180F']).toBe(batteryData);
+  });
+
   it('should manage Bluetooth state', async () => {
     expect(await bleManager.state()).toBe('PoweredOn');
 

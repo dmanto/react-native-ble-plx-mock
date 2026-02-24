@@ -91,6 +91,41 @@ describe('MockBleManager', () => {
         assert.ok(discoveredDevices.some(d => d.name === 'Smart Thermometer'));
     });
 
+    it('should return serviceData as Record<string, string> during scan', async () => {
+        const heartRateData = Buffer.from([0x01, 0x02]).toString('base64');
+        const batteryData = Buffer.from([0x64]).toString('base64');
+
+        bleManager.clearMockDevices();
+        bleManager.addMockDevice({
+            id: 'service-data-device',
+            name: 'Service Data Device',
+            rssi: -60,
+            serviceData: {
+                '180D': heartRateData,
+                '180F': batteryData,
+            },
+            serviceUUIDs: ['180D', '180F'],
+            isConnectable: true,
+        });
+
+        const device = await new Promise<MockDevice>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Timeout: device not discovered')), 2000);
+            const done = (err: Error | null, result?: MockDevice) => {
+                clearTimeout(timeout);
+                bleManager.stopDeviceScan();
+                err ? reject(err) : resolve(result!);
+            };
+            bleManager.startDeviceScan(null, null, (error, scannedDevice) => {
+                if (error) done(error);
+                else if (scannedDevice && scannedDevice.id === 'service-data-device') done(null, scannedDevice);
+            });
+        });
+
+        assert.ok(device.serviceData !== null, 'serviceData should not be null');
+        assert.strictEqual(device.serviceData!['180D'], heartRateData, 'Should return heart rate service data');
+        assert.strictEqual(device.serviceData!['180F'], batteryData, 'Should return battery service data');
+    });
+
     it('should connect to device', async () => {
         // Connect to device
         const device = await bleManager.connectToDevice(heartMonitorId);

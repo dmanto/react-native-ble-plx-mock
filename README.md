@@ -314,7 +314,7 @@ interface MockDevice {
   rssi?: number;
   mtu?: number;
   manufacturerData?: string; // base64
-  serviceData?: string | null; // base64
+  serviceData?: Record<string, string> | null; // keyed by service UUID, values are base64
   serviceUUIDs?: string[];
   isConnectable?: boolean;
   services?: () => Promise<Service[]>; // Async function for service discovery (matches real API)
