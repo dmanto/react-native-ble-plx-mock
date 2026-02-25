@@ -2,12 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+### [1.0.3](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.2...v1.0.3) (2026-02-25)
 
-### 📚 Documentation
 
-- **ADDED**: "Simulating Writes" section in README with a full command/response loop example using `onCharacteristicWrite`
-- **ADDED**: `onCharacteristicWrite` entry in the Characteristic Simulation API reference table (closes #2)
+### Documentation
+
+* add onCharacteristicWrite guide and API reference entry ([1e34c74](https://github.com/dmanto/react-native-ble-plx-mock/commit/1e34c74882e0db7c766a9fea9caa939628601a47)), closes [#2](https://github.com/dmanto/react-native-ble-plx-mock/issues/2)
 
 ### [1.0.2](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.1...v1.0.2) (2026-02-24)
 
