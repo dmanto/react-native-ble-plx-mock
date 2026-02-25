@@ -196,6 +196,8 @@ export class MockBleManager {
     private connectionDelays: Map<DeviceId, number> = new Map();
     private connectionErrors: Map<DeviceId, Error> = new Map();
     private disconnectionErrors: Map<DeviceId, Error> = new Map();
+    private deviceConnectCallbacks: Array<(deviceId: string) => void> = [];
+    private deviceDisconnectCallbacks: Array<(deviceId: string) => void> = [];
 
     // Background mode
     private restoreStateIdentifier?: string;
@@ -517,6 +519,9 @@ export class MockBleManager {
         // Notify connection listeners
         this.notifyConnectionListeners(deviceIdentifier, null, device);
 
+        // Notify connect hooks
+        this.deviceConnectCallbacks.forEach(cb => cb(deviceIdentifier));
+
         // Save restoration state
         this.saveRestorationState();
 
@@ -552,6 +557,10 @@ export class MockBleManager {
             this.disconnectionErrors.get(deviceIdentifier) || null,
             device
         );
+
+        // Notify disconnect hooks
+        this.deviceDisconnectCallbacks.forEach(cb => cb(deviceIdentifier));
+
         // Clear discovered services
         this.discoveredServices.delete(deviceIdentifier);
 
@@ -559,6 +568,16 @@ export class MockBleManager {
         this.saveRestorationState();
 
         return device;
+    }
+
+    onDeviceConnect(callback: (deviceId: string) => void): { remove: () => void } {
+        this.deviceConnectCallbacks.push(callback);
+        return { remove: () => { this.deviceConnectCallbacks = this.deviceConnectCallbacks.filter(cb => cb !== callback); } };
+    }
+
+    onDeviceDisconnect(callback: (deviceId: string) => void): { remove: () => void } {
+        this.deviceDisconnectCallbacks.push(callback);
+        return { remove: () => { this.deviceDisconnectCallbacks = this.deviceDisconnectCallbacks.filter(cb => cb !== callback); } };
     }
 
     /**
@@ -610,6 +629,9 @@ export class MockBleManager {
                 error || new Error('Simulated disconnection'),
                 device || null
             );
+
+            // Notify disconnect hooks
+            this.deviceDisconnectCallbacks.forEach(cb => cb(deviceIdentifier));
         }
     }
 

@@ -1504,4 +1504,42 @@ describe('MockBleManager', () => {
         const isConnectedViaManager = bleManager.isDeviceConnected('full-methods-test');
         assert.strictEqual(isConnectedViaManager, false, 'Manager should also report device as disconnected');
     });
+
+    it('should fire onDeviceConnect and onDeviceDisconnect hooks', async () => {
+        const connectedIds: string[] = [];
+        const disconnectedIds: string[] = [];
+
+        const connectSub = bleManager.onDeviceConnect(id => connectedIds.push(id));
+        const disconnectSub = bleManager.onDeviceDisconnect(id => disconnectedIds.push(id));
+
+        await bleManager.connectToDevice(heartMonitorId);
+        assert.deepEqual(connectedIds, [heartMonitorId], 'onDeviceConnect should fire on connect');
+        assert.deepEqual(disconnectedIds, [], 'onDeviceDisconnect should not fire yet');
+
+        await bleManager.cancelDeviceConnection(heartMonitorId);
+        assert.deepEqual(disconnectedIds, [heartMonitorId], 'onDeviceDisconnect should fire on disconnect');
+
+        connectSub.remove();
+        disconnectSub.remove();
+    });
+
+    it('should fire onDeviceDisconnect hook on simulateDeviceDisconnection', async () => {
+        const disconnectedIds: string[] = [];
+        const sub = bleManager.onDeviceDisconnect(id => disconnectedIds.push(id));
+
+        await bleManager.connectToDevice(heartMonitorId);
+        bleManager.simulateDeviceDisconnection(heartMonitorId);
+        assert.deepEqual(disconnectedIds, [heartMonitorId]);
+
+        sub.remove();
+    });
+
+    it('should stop firing hooks after remove()', async () => {
+        const connectedIds: string[] = [];
+        const sub = bleManager.onDeviceConnect(id => connectedIds.push(id));
+        sub.remove();
+
+        await bleManager.connectToDevice(heartMonitorId);
+        assert.deepEqual(connectedIds, [], 'Hook should not fire after remove()');
+    });
 });

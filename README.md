@@ -145,6 +145,31 @@ await device.writeCharacteristicWithResponseForService('180D', '2A37', Buffer.fr
 subscription.remove();
 ```
 
+## Connection Hooks
+
+Use `onDeviceConnect` and `onDeviceDisconnect` to react to connection state changes — useful for synchronizing external resources like WebSocket bridges.
+
+```typescript
+const connectSub = bleManager.onDeviceConnect((deviceId) => {
+  console.log(`${deviceId} connected — opening WebSocket bridge`);
+});
+
+const disconnectSub = bleManager.onDeviceDisconnect((deviceId) => {
+  console.log(`${deviceId} disconnected — closing WebSocket bridge`);
+});
+
+// Hooks fire automatically on connect/disconnect
+await bleManager.connectToDevice('device-1');         // → onDeviceConnect fires
+await bleManager.cancelDeviceConnection('device-1'); // → onDeviceDisconnect fires
+
+// Also fires on simulated disconnections
+bleManager.simulateDeviceDisconnection('device-1');  // → onDeviceDisconnect fires
+
+// Clean up
+connectSub.remove();
+disconnectSub.remove();
+```
+
 ## Error Simulation
 
 ```typescript
@@ -278,6 +303,13 @@ The mock library implements all methods from the original [`BleManager`](https:/
 |--------|------------|-------------|
 | **setState** | `state: State` (`'PoweredOn'`, `'PoweredOff'`, etc.) | Change Bluetooth adapter state |
 | **setDiscoveryInterval** | `interval: number` (milliseconds) | Set time between simulated device discoveries |
+
+### Connection Hooks
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| **onDeviceConnect** | `callback: (deviceId: string) => void` | Register a hook fired when any device connects; returns `{ remove() }` |
+| **onDeviceDisconnect** | `callback: (deviceId: string) => void` | Register a hook fired when any device disconnects (including simulated); returns `{ remove() }` |
 
 ### Characteristic Simulation
 
