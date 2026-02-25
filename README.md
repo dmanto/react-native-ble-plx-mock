@@ -117,6 +117,34 @@ const subscription = device.monitorCharacteristicForService('180D', '2A37', (err
 const disconnectedDevice = await device.cancelConnection();
 ```
 
+## Simulating Writes (Command/Response Loop)
+
+Use `onCharacteristicWrite` to intercept values the app writes to the mock peripheral. This lets you test the full command/response cycle: the app writes a command, the mock receives it and can reply by updating a characteristic.
+
+```typescript
+// Listen for writes from the app
+const subscription = bleManager.onCharacteristicWrite(
+  'device-1',
+  '180D', // serviceUUID
+  '2A37', // characteristicUUID
+  (valueBase64) => {
+    const command = Buffer.from(valueBase64, 'base64').toString();
+    console.log('App wrote:', command);
+
+    // Respond by updating the characteristic (e.g. simulate peripheral reaction)
+    const response = Buffer.from('OK').toString('base64');
+    bleManager.setCharacteristicValue('device-1', '180D', '2A37', response);
+  }
+);
+
+// Later, when the app writes to the characteristic:
+await device.writeCharacteristicWithResponseForService('180D', '2A37', Buffer.from('Turn On').toString('base64'));
+// → listener fires with the written value
+
+// Clean up
+subscription.remove();
+```
+
 ## Error Simulation
 
 ```typescript
@@ -257,6 +285,7 @@ The mock library implements all methods from the original [`BleManager`](https:/
 |--------|------------|-------------|
 | **setCharacteristicValue** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string`, `value: string` (base64) | Set current characteristic value |
 | **setCharacteristicValueForReading** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string`, `value: string` (base64) | Set value for next read operation |
+| **onCharacteristicWrite** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string`, `listener: (value: string) => void` | Intercept writes from the app; returns `{ remove() }` |
 | **startSimulatedNotifications** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string`, `interval: number` (ms) | Start automatic value changes |
 | **stopSimulatedNotifications** | `deviceId: string`, `serviceUUID: string`, `characteristicUUID: string` | Stop automatic value changes |
 
