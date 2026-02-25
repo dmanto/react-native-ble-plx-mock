@@ -2,13 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+## [1.1.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.3...v1.1.0) (2026-02-25)
 
-### ✨ New Features
 
-- **ADDED**: `onDeviceConnect(callback)` hook — fires when a device is successfully connected
-- **ADDED**: `onDeviceDisconnect(callback)` hook — fires when a device disconnects (including simulated disconnections)
-- Both hooks return `{ remove() }` for cleanup (closes #3)
+### Features
+
+* add onDeviceConnect and onDeviceDisconnect hooks ([62c5121](https://github.com/dmanto/react-native-ble-plx-mock/commit/62c5121215089f2ee0d619e4728118ad7399069f)), closes [#3](https://github.com/dmanto/react-native-ble-plx-mock/issues/3)
 
 ### [1.0.3](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.2...v1.0.3) (2026-02-25)
 
