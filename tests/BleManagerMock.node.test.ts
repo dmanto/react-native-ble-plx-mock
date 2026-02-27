@@ -1542,4 +1542,45 @@ describe('MockBleManager', () => {
         await bleManager.connectToDevice(heartMonitorId);
         assert.deepEqual(connectedIds, [], 'Hook should not fire after remove()');
     });
+
+    it('should fire onStartScan when startDeviceScan is called', () => {
+        let startFired = 0;
+        const sub = bleManager.onStartScan(() => startFired++);
+
+        bleManager.startDeviceScan(null, null, () => {});
+        assert.strictEqual(startFired, 1, 'onStartScan should fire once on startDeviceScan');
+
+        bleManager.stopDeviceScan();
+        sub.remove();
+    });
+
+    it('should fire onStopScan when stopDeviceScan is called', () => {
+        let stopFired = 0;
+        const sub = bleManager.onStopScan(() => stopFired++);
+
+        bleManager.startDeviceScan(null, null, () => {});
+        assert.strictEqual(stopFired, 0, 'onStopScan should not fire before stop');
+
+        bleManager.stopDeviceScan();
+        assert.strictEqual(stopFired, 1, 'onStopScan should fire once on stopDeviceScan');
+
+        sub.remove();
+    });
+
+    it('should stop firing onStartScan and onStopScan after remove()', () => {
+        let startFired = 0;
+        let stopFired = 0;
+
+        const startSub = bleManager.onStartScan(() => startFired++);
+        const stopSub = bleManager.onStopScan(() => stopFired++);
+
+        startSub.remove();
+        stopSub.remove();
+
+        bleManager.startDeviceScan(null, null, () => {});
+        bleManager.stopDeviceScan();
+
+        assert.strictEqual(startFired, 0, 'onStartScan should not fire after remove()');
+        assert.strictEqual(stopFired, 0, 'onStopScan should not fire after remove()');
+    });
 });

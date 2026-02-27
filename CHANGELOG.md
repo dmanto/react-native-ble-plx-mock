@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+### Features
+
+* add `onStartScan` and `onStopScan` hooks ([#4](https://github.com/dmanto/react-native-ble-plx-mock/issues/4))
+
 ## [1.1.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.3...v1.1.0) (2026-02-25)
 
 

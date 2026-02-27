@@ -198,6 +198,8 @@ export class MockBleManager {
     private disconnectionErrors: Map<DeviceId, Error> = new Map();
     private deviceConnectCallbacks: Array<(deviceId: string) => void> = [];
     private deviceDisconnectCallbacks: Array<(deviceId: string) => void> = [];
+    private startScanCallbacks: Array<() => void> = [];
+    private stopScanCallbacks: Array<() => void> = [];
 
     // Background mode
     private restoreStateIdentifier?: string;
@@ -580,6 +582,16 @@ export class MockBleManager {
         return { remove: () => { this.deviceDisconnectCallbacks = this.deviceDisconnectCallbacks.filter(cb => cb !== callback); } };
     }
 
+    onStartScan(callback: () => void): { remove: () => void } {
+        this.startScanCallbacks.push(callback);
+        return { remove: () => { this.startScanCallbacks = this.startScanCallbacks.filter(cb => cb !== callback); } };
+    }
+
+    onStopScan(callback: () => void): { remove: () => void } {
+        this.stopScanCallbacks.push(callback);
+        return { remove: () => { this.stopScanCallbacks = this.stopScanCallbacks.filter(cb => cb !== callback); } };
+    }
+
     /**
      * Check if a device is connected
      */
@@ -851,6 +863,8 @@ export class MockBleManager {
         this.scanOptions = options || {};
         this.scanUUIDs = UUIDs;
 
+        this.startScanCallbacks.forEach(cb => cb());
+
         this.simulateDeviceDiscovery();
     }
 
@@ -862,6 +876,8 @@ export class MockBleManager {
             clearInterval(this.scanInterval);
             this.scanInterval = null;
         }
+
+        this.stopScanCallbacks.forEach(cb => cb());
     }
 
     private simulateDeviceDiscovery() {

@@ -60,6 +60,10 @@ var MockBleManager = class {
     this.connectionDelays = /* @__PURE__ */ new Map();
     this.connectionErrors = /* @__PURE__ */ new Map();
     this.disconnectionErrors = /* @__PURE__ */ new Map();
+    this.deviceConnectCallbacks = [];
+    this.deviceDisconnectCallbacks = [];
+    this.startScanCallbacks = [];
+    this.stopScanCallbacks = [];
     // For error simulation
     this.scanErrorSimulation = null;
     // MTU management
@@ -276,6 +280,7 @@ var MockBleManager = class {
     }
     this.connectedDevices.add(deviceIdentifier);
     this.notifyConnectionListeners(deviceIdentifier, null, device);
+    this.deviceConnectCallbacks.forEach((cb) => cb(deviceIdentifier));
     this.saveRestorationState();
     return device;
   }
@@ -301,9 +306,34 @@ var MockBleManager = class {
       this.disconnectionErrors.get(deviceIdentifier) || null,
       device
     );
+    this.deviceDisconnectCallbacks.forEach((cb) => cb(deviceIdentifier));
     this.discoveredServices.delete(deviceIdentifier);
     this.saveRestorationState();
     return device;
+  }
+  onDeviceConnect(callback) {
+    this.deviceConnectCallbacks.push(callback);
+    return { remove: () => {
+      this.deviceConnectCallbacks = this.deviceConnectCallbacks.filter((cb) => cb !== callback);
+    } };
+  }
+  onDeviceDisconnect(callback) {
+    this.deviceDisconnectCallbacks.push(callback);
+    return { remove: () => {
+      this.deviceDisconnectCallbacks = this.deviceDisconnectCallbacks.filter((cb) => cb !== callback);
+    } };
+  }
+  onStartScan(callback) {
+    this.startScanCallbacks.push(callback);
+    return { remove: () => {
+      this.startScanCallbacks = this.startScanCallbacks.filter((cb) => cb !== callback);
+    } };
+  }
+  onStopScan(callback) {
+    this.stopScanCallbacks.push(callback);
+    return { remove: () => {
+      this.stopScanCallbacks = this.stopScanCallbacks.filter((cb) => cb !== callback);
+    } };
   }
   /**
    * Check if a device is connected
@@ -344,6 +374,7 @@ var MockBleManager = class {
         error || new Error("Simulated disconnection"),
         device || null
       );
+      this.deviceDisconnectCallbacks.forEach((cb) => cb(deviceIdentifier));
     }
   }
   /**
@@ -521,6 +552,7 @@ var MockBleManager = class {
     this.scanListener = listener;
     this.scanOptions = options || {};
     this.scanUUIDs = UUIDs;
+    this.startScanCallbacks.forEach((cb) => cb());
     this.simulateDeviceDiscovery();
   }
   stopDeviceScan() {
@@ -530,6 +562,7 @@ var MockBleManager = class {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
+    this.stopScanCallbacks.forEach((cb) => cb());
   }
   simulateDeviceDiscovery() {
     const devices = Array.from(this.discoveredDevices.values());

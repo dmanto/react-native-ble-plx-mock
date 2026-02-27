@@ -145,6 +145,27 @@ await device.writeCharacteristicWithResponseForService('180D', '2A37', Buffer.fr
 subscription.remove();
 ```
 
+## Scan State Hooks
+
+Use `onStartScan` and `onStopScan` to react when the app enters or exits scanning.
+
+```typescript
+const startSub = bleManager.onStartScan(() => {
+  console.log('App started scanning');
+});
+
+const stopSub = bleManager.onStopScan(() => {
+  console.log('App stopped scanning');
+});
+
+bleManager.startDeviceScan(null, null, (error, device) => { /* ... */ }); // → onStartScan fires
+bleManager.stopDeviceScan();                                               // → onStopScan fires
+
+// Clean up
+startSub.remove();
+stopSub.remove();
+```
+
 ## Connection Hooks
 
 Use `onDeviceConnect` and `onDeviceDisconnect` to react to connection state changes — useful for synchronizing external resources like WebSocket bridges.
@@ -303,6 +324,13 @@ The mock library implements all methods from the original [`BleManager`](https:/
 |--------|------------|-------------|
 | **setState** | `state: State` (`'PoweredOn'`, `'PoweredOff'`, etc.) | Change Bluetooth adapter state |
 | **setDiscoveryInterval** | `interval: number` (milliseconds) | Set time between simulated device discoveries |
+
+### Scan State Hooks
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| **onStartScan** | `callback: () => void` | Register a hook fired when `startDeviceScan` is called; returns `{ remove() }` |
+| **onStopScan** | `callback: () => void` | Register a hook fired when `stopDeviceScan` is called; returns `{ remove() }` |
 
 ### Connection Hooks
 

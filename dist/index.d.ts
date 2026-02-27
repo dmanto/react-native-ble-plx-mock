@@ -161,6 +161,10 @@ declare class MockBleManager {
     private connectionDelays;
     private connectionErrors;
     private disconnectionErrors;
+    private deviceConnectCallbacks;
+    private deviceDisconnectCallbacks;
+    private startScanCallbacks;
+    private stopScanCallbacks;
     private restoreStateIdentifier?;
     private restoreStateFunction?;
     private scanErrorSimulation;
@@ -223,6 +227,18 @@ declare class MockBleManager {
      * Disconnect from a device
      */
     cancelDeviceConnection(deviceIdentifier: DeviceId): Promise<MockDevice>;
+    onDeviceConnect(callback: (deviceId: string) => void): {
+        remove: () => void;
+    };
+    onDeviceDisconnect(callback: (deviceId: string) => void): {
+        remove: () => void;
+    };
+    onStartScan(callback: () => void): {
+        remove: () => void;
+    };
+    onStopScan(callback: () => void): {
+        remove: () => void;
+    };
     /**
      * Check if a device is connected
      */
