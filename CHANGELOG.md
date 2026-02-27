@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+## [1.2.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.1.0...v1.2.0) (2026-02-27)
+
 
 ### Features
 
-* add `onStartScan` and `onStopScan` hooks ([#4](https://github.com/dmanto/react-native-ble-plx-mock/issues/4))
+* add onStartScan and onStopScan hooks ([dfc09ec](https://github.com/dmanto/react-native-ble-plx-mock/commit/dfc09ec3b2c53c83bf22697373cd886fe1fd2f37)), closes [#4](https://github.com/dmanto/react-native-ble-plx-mock/issues/4)
 
 ## [1.1.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.0.3...v1.1.0) (2026-02-25)
 
