@@ -109,9 +109,11 @@ const writtenChar = await device.writeCharacteristicWithResponseForService('180D
 
 // Monitor characteristic using device method
 const subscription = device.monitorCharacteristicForService('180D', '2A37', (error, characteristic) => {
-  if (error) console.error('Monitor error:', error);
-  if (characteristic) console.log('New value:', characteristic.value);
+  if (characteristic) console.log('Received notification:', characteristic.value);
 });
+
+// Trigger a value change from the mock "hardware"
+bleManager.setCharacteristicValue('device-1', '180D', '2A37', Buffer.from([80]).toString('base64'));
 
 // Disconnect using device method
 const disconnectedDevice = await device.cancelConnection();
@@ -383,7 +385,7 @@ Mock devices support all the standard device-level methods that match the real r
 | **device.readCharacteristicForService()** | `serviceUUID: string`, `characteristicUUID: string`, `transactionId?: string` | Read characteristic value |
 | **device.writeCharacteristicWithResponseForService()** | `serviceUUID: string`, `characteristicUUID: string`, `base64Value: string`, `transactionId?: string` | Write with response |
 | **device.writeCharacteristicWithoutResponseForService()** | `serviceUUID: string`, `characteristicUUID: string`, `base64Value: string`, `transactionId?: string` | Write without response |
-| **device.monitorCharacteristicForService()** | `serviceUUID: string`, `characteristicUUID: string`, `listener: function`, `transactionId?: string` | Monitor characteristic changes |
+| **device.monitorCharacteristicForService()** | `serviceUUID: string`, `characteristicUUID: string`, `listener: function`, `transactionId?: string` | Monitor characteristic changes. **Note**: In v1.3.0+, this is silent upon subscription and only triggers when a new value is set via setCharacteristicValue. |
 
 ### Device Information
 
@@ -415,7 +417,12 @@ interface MockDevice {
   readCharacteristicForService?: (serviceUUID: string, characteristicUUID: string, transactionId?: string) => Promise<Characteristic>;
   writeCharacteristicWithResponseForService?: (serviceUUID: string, characteristicUUID: string, base64Value: string, transactionId?: string) => Promise<Characteristic>;
   writeCharacteristicWithoutResponseForService?: (serviceUUID: string, characteristicUUID: string, base64Value: string, transactionId?: string) => Promise<Characteristic>;
-  monitorCharacteristicForService?: (serviceUUID: string, characteristicUUID: string, listener: function, transactionId?: string) => MonitorSubscription;
+  monitorCharacteristicForService?: (
+    serviceUUID: string,
+    characteristicUUID: string,
+    listener: (error: Error | null, characteristic: Characteristic | null) => void,
+    transactionId?: string
+    ) => MonitorSubscription;
 }
 
 // When adding devices, provide services as ServiceMetadata[] - will be converted to async function

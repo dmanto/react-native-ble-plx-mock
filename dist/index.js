@@ -722,17 +722,6 @@ var MockBleManager = class {
     }
     const listeners = this.monitoredCharacteristics.get(key);
     listeners.push(listener);
-    const currentValue = this.characteristicValues.get(key) || null;
-    if (currentValue) {
-      setTimeout(() => listener(null, {
-        uuid: characteristicUUID,
-        serviceUUID,
-        deviceID: deviceIdentifier,
-        value: currentValue,
-        isNotifiable: true,
-        isIndicatable: false
-      }), 0);
-    }
     return {
       remove: () => {
         const updatedListeners = listeners.filter((l) => l !== listener);

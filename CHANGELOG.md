@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.2.0...v1.3.0) (2026-03-12)
+
+### 🔧 Behavioral Improvements (Breaking Changes)
+
+* **FIXED**: `monitorCharacteristicForDevice` is now "silent" upon subscription. It no longer automatically pushes the last known value via `setTimeout`. This aligns the mock with real-world BLE hardware behavior (Issue #5).
+* **FIXED**: Resolved a race condition where mock timers would "hang" during reconnection tests due to asynchronous microtasks in the monitoring setup.
+* **IMPROVED**: Removed internal `setTimeout(..., 0)` from monitoring logic to ensure synchronous listener registration and more predictable test execution.
+
+### 🧪 Testing & DX
+
+* **UPDATED**: Refactored internal notification logic to ensure `setCharacteristicValue` is the primary way to simulate hardware-side events in tests.
+* **STABILITY**: Added a "Deep Dive" regression test to verify that the mock maintains a silent state across disconnection and reconnection cycles even if the GATT table has existing data.
+* **TEST FIXES**: Updated both Node.js and Jest suites to explicitly trigger notifications after subscription, as the mock no longer "echoes" stored values by default.
+
 ## [1.2.0](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.1.0...v1.2.0) (2026-02-27)
 
 

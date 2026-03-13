@@ -1,4 +1,4 @@
-import { describe, it, before, after, beforeEach, afterEach, mock } from 'node:test';
+import { describe, it, beforeEach, afterEach, after, mock } from 'node:test';
 import assert from 'node:assert';
 import { MockBleManager, MockDevice } from '../src/BleManagerMock';
 import { Buffer } from 'buffer';
@@ -149,13 +149,6 @@ describe('MockBleManager', () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
 
-        bleManager.setCharacteristicValueForReading(
-            heartMonitorId,
-            serviceUUID,
-            charUUID,
-            Buffer.from([0x06, 0x48]).toString('base64')
-        );
-
         // Monitor characteristic
         const values: number[] = [];
         const sub = bleManager.monitorCharacteristicForDevice(
@@ -171,6 +164,9 @@ describe('MockBleManager', () => {
         );
 
         // Trigger updates
+        bleManager.setCharacteristicValue(heartMonitorId, serviceUUID, charUUID,
+            Buffer.from([0x06, 0x48]).toString('base64'));
+
         bleManager.setCharacteristicValue(heartMonitorId, serviceUUID, charUUID,
             Buffer.from([0x06, 0x52]).toString('base64'));
 
@@ -190,7 +186,7 @@ describe('MockBleManager', () => {
     it('should read characteristic values', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         bleManager.setCharacteristicValueForReading(
             heartMonitorId,
@@ -225,7 +221,7 @@ describe('MockBleManager', () => {
     it('should write characteristic values', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         let writtenValue = '';
         const writeListener = bleManager.onCharacteristicWrite(
@@ -430,7 +426,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic read errors', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         // Simulate read error
         const testError = new Error('Read failed');
@@ -476,7 +472,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic write errors', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         // Simulate write error
         const testError = new Error('Write failed');
@@ -553,7 +549,7 @@ describe('MockBleManager', () => {
     it('should handle Buffer convenience methods', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         // Test setCharacteristicValueFromBuffer
         const bufferValue = Buffer.from([0x01, 0x02, 0x03, 0x04]);
@@ -592,7 +588,7 @@ describe('MockBleManager', () => {
     it('should handle write without response operations', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         let writtenValue = '';
         const writeListener = bleManager.onCharacteristicWrite(
@@ -652,7 +648,7 @@ describe('MockBleManager', () => {
     it('should handle write operation delays', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         const testValue = Buffer.from([0x01, 0x02]).toString('base64');
 
@@ -697,7 +693,7 @@ describe('MockBleManager', () => {
         // Setup with connections and monitoring
         await bleManager.connectToDevice(heartMonitorId);
         await bleManager.connectToDevice(thermoId);
-        
+
 
         // Set up monitoring
         bleManager.setCharacteristicValueForReading(
@@ -711,11 +707,11 @@ describe('MockBleManager', () => {
             heartMonitorId,
             serviceUUID,
             charUUID,
-            () => {} // Empty listener
+            () => { } // Empty listener
         );
 
         // Start scanning
-        bleManager.startDeviceScan(null, null, () => {});
+        bleManager.startDeviceScan(null, null, () => { });
 
         // Start simulated notifications
         bleManager.startSimulatedNotifications(
@@ -773,14 +769,14 @@ describe('MockBleManager', () => {
     it('should handle connection and disconnection delays', async () => {
         // Test connection delay
         bleManager.setConnectionDelay(heartMonitorId, 30);
-        
+
         const startTime = Date.now();
         await bleManager.connectToDevice(heartMonitorId);
         const elapsedTime = Date.now() - startTime;
         assert.ok(elapsedTime >= 25, 'Should have at least 25ms connection delay');
-        
+
         assert.ok(bleManager.isDeviceConnected(heartMonitorId));
-        
+
         // Test disconnection (no specific delay method, but testing the flow)
         await bleManager.cancelDeviceConnection(heartMonitorId);
         assert.ok(!bleManager.isDeviceConnected(heartMonitorId));
@@ -789,7 +785,7 @@ describe('MockBleManager', () => {
     it('should handle characteristic error simulation during monitoring', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         let receivedError: Error | null = null;
         const monitoringSub = bleManager.monitorCharacteristicForDevice(
@@ -822,7 +818,7 @@ describe('MockBleManager', () => {
     it('should handle edge cases in notifications', async () => {
         // Setup
         await bleManager.connectToDevice(heartMonitorId);
-        
+
 
         // Test notifications without listeners (should not crash)
         bleManager.setCharacteristicValueForReading(
@@ -954,7 +950,7 @@ describe('MockBleManager', () => {
         // Connect and discover
         await bleManager.connectToDevice(heartMonitorId);
         await bleManager.discoverAllServicesAndCharacteristicsForDevice(heartMonitorId);
-        
+
 
         // Set initial characteristic values
         bleManager.setCharacteristicValueForReading(
@@ -1055,12 +1051,12 @@ describe('MockBleManager', () => {
         // Test characteristics for service
         const characteristics = await bleManager.characteristicsForService(serviceUUID, heartMonitorId);
         assert.strictEqual(characteristics.length, 2);
-        
+
         const hrMeasurement = characteristics.find(c => c.uuid === charUUID);
         assert.ok(hrMeasurement);
         assert.strictEqual(hrMeasurement.isIndicatable, false);
         assert.strictEqual(hrMeasurement.isNotifiable, true);
-        
+
         const controlPoint = characteristics.find(c => c.uuid === '2A39');
         assert.ok(controlPoint);
         assert.strictEqual(controlPoint.isIndicatable, true);
@@ -1161,11 +1157,11 @@ describe('MockBleManager', () => {
         // Now services should be available
         const services = await bleManager.servicesForDevice('discovery-test-device');
         assert.strictEqual(services.length, 2);
-        
+
         const heartRateService = services.find(s => s.uuid === serviceUUID);
         assert.ok(heartRateService);
         assert.strictEqual(heartRateService.deviceID, 'discovery-test-device');
-        
+
         const batteryService = services.find(s => s.uuid === '180F');
         assert.ok(batteryService);
         assert.strictEqual(batteryService.deviceID, 'discovery-test-device');
@@ -1221,12 +1217,12 @@ describe('MockBleManager', () => {
         // Wait for device to be found
         await new Promise(resolve => setTimeout(resolve, 10));
         bleManager.stopDeviceScan();
-        
+
         assert.ok(deviceFromScan, 'Device should be found during scan');
-        
+
         // Type assertion after the null check
         const device = deviceFromScan as MockDevice;
-        
+
         // Verify discoverAllServicesAndCharacteristics method exists on device
         assert.ok(
             typeof device.discoverAllServicesAndCharacteristics === 'function',
@@ -1235,7 +1231,7 @@ describe('MockBleManager', () => {
 
         // Connect to device
         const connectedDevice = await bleManager.connectToDevice(device.id);
-        
+
         // Services should not be available before discovery
         await assert.rejects(
             () => bleManager.servicesForDevice(connectedDevice.id),
@@ -1257,7 +1253,7 @@ describe('MockBleManager', () => {
     it('should support Service.characteristics() async method', async () => {
         // Test that Service objects returned by servicesForDevice() have async characteristics() method
         // that returns Characteristic[] (not CharacteristicMetadata[])
-        
+
         const servicesMetadata = [
             {
                 uuid: serviceUUID, // '180D' Heart Rate Service
@@ -1300,23 +1296,23 @@ describe('MockBleManager', () => {
         // Connect and discover
         await bleManager.connectToDevice('service-char-test');
         await bleManager.discoverAllServicesAndCharacteristicsForDevice('service-char-test');
-        
+
         // Get services - these should be Service objects with async characteristics() method
         const services = await bleManager.servicesForDevice('service-char-test');
         assert.strictEqual(services.length, 2, 'Should have 2 services');
-        
+
         // Test heart rate service
         const heartRateService = services.find(s => s.uuid === serviceUUID);
         assert.ok(heartRateService, 'Should find heart rate service');
         assert.strictEqual(heartRateService.deviceID, 'service-char-test');
-        
+
         // THIS IS THE CRITICAL TEST: characteristics() should be async and return Characteristic[]
         assert.ok(typeof heartRateService.characteristics === 'function', 'Service should have characteristics method');
-        
+
         const hrCharacteristics = await heartRateService.characteristics();
         assert.ok(Array.isArray(hrCharacteristics), 'characteristics() should return an array');
         assert.strictEqual(hrCharacteristics.length, 2, 'Heart rate service should have 2 characteristics');
-        
+
         // Verify these are Characteristic objects (not CharacteristicMetadata)
         const hrMeasurement = hrCharacteristics.find(c => c.uuid === charUUID);
         assert.ok(hrMeasurement, 'Should find heart rate measurement characteristic');
@@ -1325,24 +1321,24 @@ describe('MockBleManager', () => {
         assert.strictEqual(hrMeasurement.isReadable, true, 'Characteristic should be readable');
         assert.strictEqual(hrMeasurement.isNotifiable, true, 'Characteristic should be notifiable');
         assert.ok(hrMeasurement.hasOwnProperty('value'), 'Characteristic should have value property (even if null)');
-        
+
         const hrControlPoint = hrCharacteristics.find(c => c.uuid === '2A39');
         assert.ok(hrControlPoint, 'Should find heart rate control point characteristic');
         assert.strictEqual(hrControlPoint.isReadable, false, 'Control point should not be readable');
         assert.strictEqual(hrControlPoint.isWritableWithResponse, true, 'Control point should be writable with response');
-        
+
         // Test battery service
         const batteryService = services.find(s => s.uuid === '180F');
         assert.ok(batteryService, 'Should find battery service');
-        
+
         const batteryCharacteristics = await batteryService.characteristics();
         assert.strictEqual(batteryCharacteristics.length, 1, 'Battery service should have 1 characteristic');
-        
+
         const batteryLevel = batteryCharacteristics[0];
         assert.strictEqual(batteryLevel.uuid, '2A19', 'Should be battery level characteristic');
         assert.strictEqual(batteryLevel.serviceUUID, '180F', 'Characteristic should belong to battery service');
         assert.strictEqual(batteryLevel.deviceID, 'service-char-test', 'Characteristic should belong to correct device');
-        
+
         // The key test: Verify this is consistent with real BLE API behavior
         // Both mock and real APIs should now have identical async characteristics() method
         console.log('✅ Service.characteristics() returns Promise<Characteristic[]> as expected');
@@ -1393,12 +1389,12 @@ describe('MockBleManager', () => {
         // Wait for device to be found
         await new Promise(resolve => setTimeout(resolve, 10));
         bleManager.stopDeviceScan();
-        
+
         assert.ok(deviceFromScan, 'Device should be found during scan');
-        
+
         // Type assertion after the null check
         const scanDevice = deviceFromScan as MockDevice;
-        
+
         // Verify all device methods exist
         assert.ok(typeof scanDevice.discoverAllServicesAndCharacteristics === 'function',
             'Device should have discoverAllServicesAndCharacteristics method');
@@ -1421,43 +1417,43 @@ describe('MockBleManager', () => {
 
         // Connect to device
         const connectedDevice = await bleManager.connectToDevice(scanDevice.id);
-        
+
         // Test isConnected method (should be true after connection)
         const isConnectedAfter = await connectedDevice.isConnected!();
         assert.strictEqual(isConnectedAfter, true, 'Device should be connected after connect');
-        
+
         // Discover services and characteristics using device method
         await connectedDevice.discoverAllServicesAndCharacteristics!();
-        
+
         // Set up test data for characteristic operations
         const testReadValue = Buffer.from('initial read value').toString('base64');
         bleManager.setCharacteristicValueForReading('full-methods-test', serviceUUID, charUUID, testReadValue);
-        
+
         // Test readCharacteristicForService method
         const readChar = await connectedDevice.readCharacteristicForService!(serviceUUID, charUUID);
         assert.strictEqual(readChar.value, testReadValue, 'Should read correct characteristic value');
         assert.strictEqual(readChar.uuid, charUUID);
         assert.strictEqual(readChar.serviceUUID, serviceUUID);
         assert.strictEqual(readChar.deviceID, 'full-methods-test');
-        
+
         // Test writeCharacteristicWithResponseForService method
         const writeValue1 = Buffer.from('write with response test').toString('base64');
         const writtenChar1 = await connectedDevice.writeCharacteristicWithResponseForService!(serviceUUID, charUUID, writeValue1);
         assert.strictEqual(writtenChar1.value, writeValue1, 'Should write correct value with response');
         assert.strictEqual(writtenChar1.uuid, charUUID);
         assert.strictEqual(writtenChar1.serviceUUID, serviceUUID);
-        
+
         // Test writeCharacteristicWithoutResponseForService method
         const writeValue2 = Buffer.from('write without response test').toString('base64');
         const writtenChar2 = await connectedDevice.writeCharacteristicWithoutResponseForService!(serviceUUID, charUUID, writeValue2);
         assert.strictEqual(writtenChar2.value, writeValue2, 'Should write correct value without response');
         assert.strictEqual(writtenChar2.uuid, charUUID);
         assert.strictEqual(writtenChar2.serviceUUID, serviceUUID);
-        
+
         // Test monitorCharacteristicForService method
         let monitoringNotificationReceived = false;
         let receivedCharacteristic: any = null;
-        
+
         const subscription = connectedDevice.monitorCharacteristicForService!(serviceUUID, charUUID, (error, characteristic) => {
             if (error) {
                 assert.fail(`Monitoring error: ${error.message}`);
@@ -1468,38 +1464,41 @@ describe('MockBleManager', () => {
                 receivedCharacteristic = characteristic;
             }
         });
-        
+
+        // ADD THIS LINE: Manually trigger a value to satisfy the test expectation
+        bleManager.setCharacteristicValue('full-methods-test', serviceUUID, charUUID, testReadValue);
+
         // Wait for initial notification (should receive the current value)
         await new Promise(resolve => setTimeout(resolve, 20));
-        
+
         assert(monitoringNotificationReceived, 'Should receive monitoring notification');
         assert.ok(receivedCharacteristic, 'Should receive characteristic data');
         assert.strictEqual(receivedCharacteristic.uuid, charUUID);
         assert.strictEqual(receivedCharacteristic.serviceUUID, serviceUUID);
         assert.strictEqual(receivedCharacteristic.deviceID, 'full-methods-test');
-        
+
         // Test that monitoring receives new values
         monitoringNotificationReceived = false;
         const newMonitorValue = Buffer.from('new monitoring value').toString('base64');
         bleManager.setCharacteristicValue('full-methods-test', serviceUUID, charUUID, newMonitorValue, { notify: true });
-        
+
         // Wait for notification
         await new Promise(resolve => setTimeout(resolve, 10));
-        
+
         assert(monitoringNotificationReceived, 'Should receive new value notification');
         assert.strictEqual(receivedCharacteristic.value, newMonitorValue);
-        
+
         // Clean up monitoring subscription
         subscription.remove();
-        
+
         // Test cancelConnection method
         const disconnectedDevice = await connectedDevice.cancelConnection!();
         assert.strictEqual(disconnectedDevice.id, 'full-methods-test', 'Should return the same device after disconnection');
-        
+
         // Verify device is no longer connected using device method
         const isConnectedFinal = await disconnectedDevice.isConnected!();
         assert.strictEqual(isConnectedFinal, false, 'Device should report as disconnected after cancellation');
-        
+
         // Verify device is no longer connected using manager method
         const isConnectedViaManager = bleManager.isDeviceConnected('full-methods-test');
         assert.strictEqual(isConnectedViaManager, false, 'Manager should also report device as disconnected');
@@ -1547,7 +1546,7 @@ describe('MockBleManager', () => {
         let startFired = 0;
         const sub = bleManager.onStartScan(() => startFired++);
 
-        bleManager.startDeviceScan(null, null, () => {});
+        bleManager.startDeviceScan(null, null, () => { });
         assert.strictEqual(startFired, 1, 'onStartScan should fire once on startDeviceScan');
 
         bleManager.stopDeviceScan();
@@ -1558,7 +1557,7 @@ describe('MockBleManager', () => {
         let stopFired = 0;
         const sub = bleManager.onStopScan(() => stopFired++);
 
-        bleManager.startDeviceScan(null, null, () => {});
+        bleManager.startDeviceScan(null, null, () => { });
         assert.strictEqual(stopFired, 0, 'onStopScan should not fire before stop');
 
         bleManager.stopDeviceScan();
@@ -1577,10 +1576,75 @@ describe('MockBleManager', () => {
         startSub.remove();
         stopSub.remove();
 
-        bleManager.startDeviceScan(null, null, () => {});
+        bleManager.startDeviceScan(null, null, () => { });
         bleManager.stopDeviceScan();
 
         assert.strictEqual(startFired, 0, 'onStartScan should not fire after remove()');
         assert.strictEqual(stopFired, 0, 'onStopScan should not fire after remove()');
+    });
+    it('should maintain silent state across reconnection after a write (Issue #5 deep dive)', async () => {
+        const deviceId = 'deep-echo-device';
+        const serviceUUID = '180D';
+        const charUUID = '2A37';
+        const testValue = Buffer.from([0x77]).toString('base64'); // "w"
+
+        mock.timers.enable();
+        after(() => {
+            mock.timers.reset();
+        });
+
+        // Setup device with write/notify capabilities
+        bleManager.addMockDevice({
+            id: deviceId,
+            name: 'Deep Tester',
+            isConnectable: true,
+            services: [{
+                uuid: serviceUUID,
+                characteristics: [{
+                    uuid: charUUID,
+                    isReadable: true,
+                    isWritableWithoutResponse: true,
+                    isNotifiable: true,
+                    properties: { read: true, writeWithoutResponse: true, notify: true }
+                }]
+            }]
+        });
+
+        // 1. Write and Verify Read
+        await bleManager.connectToDevice(deviceId);
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(deviceId);
+
+        let monitorCount = 0;
+        const sub = bleManager.monitorCharacteristicForDevice(deviceId, serviceUUID, charUUID, () => {
+            monitorCount++;
+        });
+
+        await bleManager.writeCharacteristicWithoutResponseForDevice(deviceId, serviceUUID, charUUID, testValue);
+
+        // Verify the value actually changed in the mock state
+        const char = await bleManager.readCharacteristicForDevice(deviceId, serviceUUID, charUUID);
+        assert.strictEqual(char.value, testValue, 'The write should have updated the internal state');
+
+        // 2 & 3. Disconnect and Reconnect
+        sub.remove(); // Remove old sub
+        await bleManager.cancelDeviceConnection(deviceId);
+        assert.strictEqual(bleManager.isDeviceConnected(deviceId), false);
+
+        await bleManager.connectToDevice(deviceId);
+
+        // 4. Wait 1 second and monitor for silence
+        let postReconnectNotifications = 0;
+        const sub2 = bleManager.monitorCharacteristicForDevice(deviceId, serviceUUID, charUUID, () => {
+            postReconnectNotifications++;
+        });
+
+        // Wait for a full second as requested
+        mock.timers.tick(1000)
+        // 5. Tear down and Assert
+        sub2.remove();
+
+        // Assertions
+        assert.strictEqual(monitorCount, 0, 'Initial write should not have triggered the monitor');
+        assert.strictEqual(postReconnectNotifications, 0, 'Reconnecting should not trigger stale notifications');
     });
 });

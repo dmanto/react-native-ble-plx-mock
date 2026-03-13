@@ -697,7 +697,7 @@ export class MockBleManager {
     // ======================
     // Device Scanning
     // ======================
-    
+
     /**
      * Convenient helper method for tests - adds a simple test device with basic service/characteristic setup
      */
@@ -723,7 +723,7 @@ export class MockBleManager {
                 }]
             }]
         };
-        
+
         this.addMockDevice(device);
         return this.discoveredDevices.get(deviceId)!;
     }
@@ -733,7 +733,7 @@ export class MockBleManager {
         if (device.isConnectable === undefined) {
             device.isConnectable = true;
         }
-        
+
         // Store service metadata separately for internal use (convert ServiceConfig to CharacteristicMetadata)
         if (device.services) {
             const serviceMetadata = device.services.map(serviceConfig => ({
@@ -752,7 +752,7 @@ export class MockBleManager {
             })) as ServiceMetadata[];
             this.serviceMetadata.set(device.id, serviceMetadata);
         }
-        
+
         // Create the mock device with async services function and all device-level methods
         const mockDevice: MockDevice = {
             id: device.id,
@@ -823,7 +823,7 @@ export class MockBleManager {
                 return this.cancelDeviceConnection(device.id);
             }
         };
-        
+
         this.discoveredDevices.set(device.id, mockDevice);
     }
 
@@ -1169,19 +1169,6 @@ export class MockBleManager {
         const listeners = this.monitoredCharacteristics.get(key)!;
         listeners.push(listener);
 
-        // Return current value immediately
-        const currentValue = this.characteristicValues.get(key) || null;
-        if (currentValue) {
-            setTimeout(() => listener(null, {
-                uuid: characteristicUUID,
-                serviceUUID,
-                deviceID: deviceIdentifier,
-                value: currentValue,
-                isNotifiable: true,
-                isIndicatable: false
-            }), 0);
-        }
-
         return {
             remove: () => {
                 const updatedListeners = listeners.filter(l => l !== listener);
@@ -1257,7 +1244,7 @@ export class MockBleManager {
     // ======================
     // Helper Methods
     // ======================
-    
+
     /**
      * Public method to notify characteristic change for testing
      * First sets the characteristic value, then notifies listeners
@@ -1271,7 +1258,7 @@ export class MockBleManager {
         // Set the value first
         this.setCharacteristicValue(deviceIdentifier, serviceUUID, characteristicUUID, value, { notify: true });
     }
-    
+
     private _notifyCharacteristicChange(
         deviceIdentifier: DeviceId,
         serviceUUID: UUID,
@@ -1587,7 +1574,7 @@ export class MockBleManager {
         this.deviceMaxMTUs.clear();
         this.discoveredServices.clear();
         this.serviceMetadata.clear();
-        
+
         // Clear all error and delay maps
         this.readDelays.clear();
         this.readErrors.clear();
