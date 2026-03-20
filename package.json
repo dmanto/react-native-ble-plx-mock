@@ -22,6 +22,7 @@
     "view-coverage": "c8 report --reporter=text"
   },
   "peerDependencies": {
+    "react": ">=18",
     "react-native-ble-plx": "^3.x"
   },
   "keywords": [
