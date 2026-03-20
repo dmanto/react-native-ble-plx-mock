@@ -1,3 +1,6 @@
+declare global {
+    var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
 type State = 'Unknown' | 'Resetting' | 'Unsupported' | 'Unauthorized' | 'PoweredOff' | 'PoweredOn';
 type UUID = string;
 type DeviceId = string;

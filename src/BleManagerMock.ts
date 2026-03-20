@@ -1,3 +1,27 @@
+// When running inside a React act environment (e.g. RNTL / react-test-renderer),
+// wrap listener callbacks in act() so React processes resulting state updates
+// without emitting "not wrapped in act()" warnings.
+// IS_REACT_ACT_ENVIRONMENT is the standard React 18 flag set by @testing-library/react-native.
+declare global {
+    // eslint-disable-next-line no-var
+    var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
+}
+
+function withAct(fn: () => void): void {
+    if (!globalThis.IS_REACT_ACT_ENVIRONMENT) {
+        fn();
+        return;
+    }
+    try {
+        // react is always present in RN projects; require is available in Jest-transformed envs
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { act } = require('react') as { act: (fn: () => void) => void };
+        void act(fn);
+    } catch {
+        fn();
+    }
+}
+
 export type State =
     | 'Unknown'
     | 'Resetting'
@@ -1238,7 +1262,7 @@ export class MockBleManager {
     ) {
         const key = this.getCharacteristicKey(deviceIdentifier, serviceUUID, characteristicUUID);
         const listeners = this.monitoredCharacteristics.get(key) || [];
-        listeners.forEach(listener => listener(error, null));
+        withAct(() => listeners.forEach(listener => listener(error, null)));
     }
 
     // ======================
@@ -1278,7 +1302,7 @@ export class MockBleManager {
                 isIndicatable: false
             };
 
-            listeners.forEach(listener => listener(null, characteristic));
+            withAct(() => listeners.forEach(listener => listener(null, characteristic)));
         }
     }
 
