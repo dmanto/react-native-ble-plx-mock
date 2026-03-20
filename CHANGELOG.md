@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.2](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.3.1...v1.3.2) (2026-03-20)
+
+
+### Bug Fixes
+
+* add react as peerDependency so tsup does not bundle it inline ([d8d8e1c](https://github.com/dmanto/react-native-ble-plx-mock/commit/d8d8e1ce39d04e9a3d3fd8a81c236c21a7201edb))
+
 ### [1.3.1](https://github.com/dmanto/react-native-ble-plx-mock/compare/v1.3.0...v1.3.1) (2026-03-20)
 
 
